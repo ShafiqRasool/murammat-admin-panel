@@ -37,3 +37,25 @@ export const getAdminBookings = (filters: BookingFilters) =>
 
 export const assignBooking = (id: string, provider_id: string) =>
   api.post(`/admin/bookings/${id}/assign`, { provider_id }).then(r => r.data);
+
+export const cancelBooking = (id: string) =>
+  api.patch(`/admin/bookings/${id}/cancel`).then(r => r.data);
+
+export interface CreateAdminBookingPayload {
+  customer_id?: string; // Optional if manual_customer is provided
+  manual_customer?: {
+    first_name: string;
+    last_name: string;
+    phone: string;
+    address_line1: string;
+    city_id: string;
+    area_id: string;
+  };
+  service_id: string;
+  quantity: number;
+  scheduled_time: string;
+  problem_message?: string;
+}
+
+export const createAdminBooking = (payload: CreateAdminBookingPayload) =>
+  api.post<{ message: string, booking_id: string }>('/admin/bookings', payload).then(r => r.data);

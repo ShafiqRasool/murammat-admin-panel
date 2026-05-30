@@ -12,6 +12,9 @@ import ServicesPage from './pages/ServicesPage';
 import ProvidersPage from './pages/ProvidersPage';
 import BookingsPage from './pages/BookingsPage';
 import ComplaintsPage from './pages/ComplaintsPage';
+import CustomersPage from './pages/CustomersPage';
+import BlogsPage from './pages/BlogsPage';
+import CallRequestsPage from './pages/CallRequestsPage';
 
 // ─── Protected Route Wrapper ───────────────────────────────────────────
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -96,6 +99,30 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <Layout><ComplaintsPage /></Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/customers"
+        element={
+          <ProtectedRoute>
+            <Layout><CustomersPage /></Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/blogs"
+        element={
+          <ProtectedRoute>
+            <Layout><BlogsPage /></Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/call-requests"
+        element={
+          <ProtectedRoute>
+            <Layout><CallRequestsPage /></Layout>
           </ProtectedRoute>
         }
       />

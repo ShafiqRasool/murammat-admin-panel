@@ -6,13 +6,15 @@ import Modal from '../components/ui/Modal';
 import { toast } from '../components/ui/Toast';
 
 // ─── Filter tabs ─────────────────────────────────────────────────────────
-type FilterTab = 'all' | 'unapproved' | 'approved' | 'rejected';
+type FilterTab = 'all' | 'unapproved' | 'approved' | 'rejected' | 'online' | 'offline';
 
 const TABS: { key: FilterTab; label: string; color?: string }[] = [
   { key: 'all',        label: 'All Providers' },
   { key: 'unapproved', label: 'Pending Review', color: '#d97706' },
   { key: 'approved',   label: 'Approved',       color: '#00674F' },
-  { key: 'rejected',   label: 'Rejected',        color: '#dc2626' },
+  { key: 'rejected',   label: 'Rejected',       color: '#dc2626' },
+  { key: 'online',     label: '🟢 Online',       color: '#00c896' },
+  { key: 'offline',    label: '⚫ Offline',       color: '#4a6b5e' },
 ];
 
 // ─── Providers Page ──────────────────────────────────────────────────────
@@ -31,7 +33,9 @@ const ProvidersPage: React.FC = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const status = activeTab === 'all' ? undefined : activeTab as ApprovalStatus;
+      // Online/Offline are client-side filters — still fetch all (or by approval status)
+      const approvalTab = ['online', 'offline'].includes(activeTab) ? undefined : activeTab as ApprovalStatus;
+      const status = approvalTab === 'all' ? undefined : approvalTab;
       setProviders(await getProviders(status));
     } catch {
       toast('Failed to load providers', 'error');
@@ -63,6 +67,10 @@ const ProvidersPage: React.FC = () => {
 
   // ── Filter by search ──
   const filtered = providers.filter(p => {
+    // Online/Offline filter
+    if (activeTab === 'online'  && !p.is_online)  return false;
+    if (activeTab === 'offline' &&  p.is_online)  return false;
+
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return (
@@ -143,6 +151,7 @@ const ProvidersPage: React.FC = () => {
               { label: 'Email', flex: 1.5 },
               { label: 'Phone', flex: 1 },
               { label: 'Registered', flex: 0.9 },
+              { label: 'Online', flex: 0.7 },
               { label: 'Status', flex: 0.9 },
             ].map(c => (
               <span key={c.label} style={{ flex: c.flex, fontSize: '11px', fontWeight: 700, color: '#878787', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -196,6 +205,19 @@ const ProvidersPage: React.FC = () => {
                 <span style={{ flex: 0.9, fontSize: '12px', color: '#4a6b5e' }}>
                   {new Date(p.created_at).toLocaleDateString()}
                 </span>
+                {/* Online/Offline pill */}
+                <div style={{ flex: 0.7 }}>
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '5px',
+                    padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700,
+                    background: p.is_online ? '#00c89618' : '#4a6b5e18',
+                    color: p.is_online ? '#00c896' : '#4a6b5e',
+                    border: `1px solid ${p.is_online ? '#00c89640' : '#4a6b5e40'}`,
+                  }}>
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: p.is_online ? '#00c896' : '#4a6b5e', display: 'inline-block' }} />
+                    {p.is_online ? 'Online' : 'Offline'}
+                  </span>
+                </div>
                 <div style={{ flex: 0.9 }}>
                   <Badge variant={statusVariant(p.approval_status)}>
                     {p.approval_status}

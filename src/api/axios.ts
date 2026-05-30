@@ -30,10 +30,14 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('admin_token');
-      localStorage.removeItem('admin_secret');
-      localStorage.removeItem('admin_user');
-      window.location.href = '/login';
+      // Don't redirect if we are already trying to log in
+      const isLoginRequest = error.config?.url?.includes('/auth/login');
+      if (!isLoginRequest) {
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_secret');
+        localStorage.removeItem('admin_user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

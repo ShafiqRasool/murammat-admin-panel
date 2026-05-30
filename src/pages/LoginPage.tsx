@@ -42,7 +42,7 @@ const Field: React.FC<{
 
 // ─── Login Page ─────────────────────────────────────────────────────────
 const LoginPage: React.FC = () => {
-  const [email, setEmail]       = useState('');
+  const [phone, setPhone]       = useState('');
   const [password, setPassword] = useState('');
   const [secret, setSecret]     = useState('');
   const [error, setError]       = useState('');
@@ -56,14 +56,14 @@ const LoginPage: React.FC = () => {
     e.preventDefault();
     setError('');
 
-    if (!email || !password || !secret) {
+    if (!phone || !password || !secret) {
       setError('All fields are required.');
       return;
     }
 
     try {
       setLoading(true);
-      await login(email, password, secret);
+      await login(phone, password, secret);
       navigate('/dashboard');
     } catch (err: any) {
       setError(err?.response?.data?.error || err?.message || 'Login failed. Please check your credentials.');
@@ -133,11 +133,11 @@ const LoginPage: React.FC = () => {
         {/* ── Form ── */}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <Field
-            label="Email Address"
-            type="email"
-            value={email}
-            onChange={setEmail}
-            placeholder="admin@murammat.com"
+            label="Phone Number / Identifier"
+            type="text"
+            value={phone}
+            onChange={(val) => setPhone(val)}
+            placeholder="Enter your phone number"
             icon={
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="16" height="16">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>

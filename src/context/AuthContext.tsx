@@ -12,7 +12,7 @@ interface AuthContextType {
   user: AdminUser | null;
   token: string | null;
   isLoading: boolean;
-  login: (email: string, password: string, adminSecret: string) => Promise<void>;
+  login: (phone: string, password: string, adminSecret: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -43,13 +43,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   // Login: calls POST /api/auth/login, expects { token, user }
-  const login = async (email: string, password: string, adminSecret: string) => {
+  const login = async (phone: string, password: string, adminSecret: string) => {
     // Store the secret BEFORE the API call so the axios interceptor
     // can attach x-admin-secret-key on the very first request
     localStorage.setItem('admin_secret', adminSecret);
 
     try {
-      const response = await api.post('/auth/login', { email, password });
+      const response = await api.post('/auth/login', { phone, password });
       const { token: jwtToken, user: userData } = response.data;
 
       // Verify user has admin role
