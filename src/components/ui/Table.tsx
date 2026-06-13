@@ -1,5 +1,6 @@
 import React from 'react';
 import Button from './Button';
+import Pagination from './Pagination';
 
 interface Column {
   key: string;
@@ -14,6 +15,13 @@ interface TableProps {
   onDelete?: (row: any) => void;
   actions?: (row: any) => React.ReactNode;
   emptyText?: string;
+  pagination?: {
+    currentPage: number;
+    totalItems: number;
+    pageSize: number;
+    onPageChange: (page: number) => void;
+    onPageSizeChange: (size: number) => void;
+  };
 }
 
 const Table: React.FC<TableProps> = ({ 
@@ -22,7 +30,8 @@ const Table: React.FC<TableProps> = ({
   onEdit, 
   onDelete, 
   actions,
-  emptyText = 'No records found.' 
+  emptyText = 'No records found.',
+  pagination
 }) => (
   <div style={{ background: '#122b22', border: '1px solid #1e3d30', borderRadius: '12px', overflow: 'hidden' }}>
     <div style={{ display: 'flex', padding: '12px 16px', borderBottom: '1px solid #1e3d30', background: '#0d241c' }}>
@@ -39,7 +48,7 @@ const Table: React.FC<TableProps> = ({
       rows.map((row, i) => (
         <div
           key={row.id ?? i}
-          style={{ display: 'flex', alignItems: 'center', padding: '13px 16px', borderBottom: i < rows.length - 1 ? '1px solid #1e3d3060' : 'none', transition: 'background 0.12s' }}
+          style={{ display: 'flex', alignItems: 'center', padding: '13px 16px', borderBottom: (i < rows.length - 1 || !!pagination) ? '1px solid #1e3d3060' : 'none', transition: 'background 0.12s' }}
           onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#183828'}
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
         >
@@ -58,6 +67,15 @@ const Table: React.FC<TableProps> = ({
           </div>
         </div>
       ))
+    )}
+    {pagination && (
+      <Pagination
+        currentPage={pagination.currentPage}
+        totalItems={pagination.totalItems}
+        pageSize={pagination.pageSize}
+        onPageChange={pagination.onPageChange}
+        onPageSizeChange={pagination.onPageSizeChange}
+      />
     )}
   </div>
 );

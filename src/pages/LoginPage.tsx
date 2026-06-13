@@ -9,27 +9,54 @@ const Field: React.FC<{
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
-  icon: React.ReactNode;
-}> = ({ label, type = 'text', value, onChange, placeholder, icon }) => (
+  icon?: React.ReactNode;
+  isPhone?: boolean;
+}> = ({ label, type = 'text', value, onChange, placeholder, icon, isPhone }) => (
   <div>
     <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#878787', marginBottom: '6px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
       {label}
     </label>
-    <div style={{ position: 'relative' }}>
-      <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#4a6b5e' }}>
-        {icon}
-      </span>
+    <div style={{ display: 'flex', position: 'relative', width: '100%' }}>
+      {isPhone ? (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#0a1a15',
+          border: '1px solid #1e3d30',
+          borderRight: 'none',
+          padding: '0 12px',
+          color: '#878787',
+          fontWeight: 'bold',
+          fontSize: '14px',
+          userSelect: 'none',
+          borderRadius: '10px 0 0 10px',
+        }}>
+          +92
+        </div>
+      ) : (
+        <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#4a6b5e' }}>
+          {icon}
+        </span>
+      )}
       <input
         type={type}
         value={value}
-        onChange={e => onChange(e.target.value)}
+        onChange={e => {
+          let val = e.target.value;
+          if (isPhone) {
+            val = val.replace(/\D/g, '');
+          }
+          onChange(val);
+        }}
         placeholder={placeholder}
+        maxLength={isPhone ? 11 : undefined}
         style={{
           width: '100%',
-          padding: '11px 14px 11px 40px',
+          padding: isPhone ? '11px 14px' : '11px 14px 11px 40px',
           background: '#0a1a15',
           border: '1px solid #1e3d30',
-          borderRadius: '10px',
+          borderRadius: isPhone ? '0 10px 10px 0' : '10px',
           color: '#e8f5f0',
           fontSize: '14px',
           transition: 'border-color 0.15s',
@@ -42,12 +69,13 @@ const Field: React.FC<{
 
 // ─── Login Page ─────────────────────────────────────────────────────────
 const LoginPage: React.FC = () => {
-  const [phone, setPhone]       = useState('');
-  const [password, setPassword] = useState('');
-  const [secret, setSecret]     = useState('');
-  const [error, setError]       = useState('');
-  const [loading, setLoading]   = useState(false);
-  const [showPass, setShowPass] = useState(false);
+  const [phone, setPhone]         = useState('');
+  const [password, setPassword]   = useState('');
+  const [secret, setSecret]       = useState('');
+  const [isMasterAdmin, setIsMasterAdmin] = useState(false);
+  const [error, setError]         = useState('');
+  const [loading, setLoading]     = useState(false);
+  const [showPass, setShowPass]   = useState(false);
 
   const { login } = useAuth();
   const navigate  = useNavigate();
@@ -56,14 +84,32 @@ const LoginPage: React.FC = () => {
     e.preventDefault();
     setError('');
 
-    if (!phone || !password || !secret) {
-      setError('All fields are required.');
+    if (!phone || !password) {
+      setError('Phone number and password are required.');
+      return;
+    }
+
+    const phoneRegex = /^(03|3)\d{9}$/;
+    if (!phoneRegex.test(phone.trim())) {
+      setError('Please enter a valid Pakistani phone number (e.g. 3001234567 or 03001234567).');
+      return;
+    }
+
+    if (isMasterAdmin && !secret) {
+      setError('Admin Secret Key is required for Master Admin login.');
       return;
     }
 
     try {
       setLoading(true);
-      await login(phone, password, secret);
+      
+      // Clean to Pakistani standard format
+      let formattedPhone = phone.trim();
+      if (formattedPhone.startsWith('3') && formattedPhone.length === 10) {
+        formattedPhone = '0' + formattedPhone;
+      }
+
+      await login(formattedPhone, password, isMasterAdmin ? secret : undefined);
       navigate('/dashboard');
     } catch (err: any) {
       setError(err?.response?.data?.error || err?.message || 'Login failed. Please check your credentials.');
@@ -133,17 +179,12 @@ const LoginPage: React.FC = () => {
         {/* ── Form ── */}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <Field
-            label="Phone Number / Identifier"
+            label="Phone Number"
             type="text"
             value={phone}
             onChange={(val) => setPhone(val)}
-            placeholder="Enter your phone number"
-            icon={
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="16" height="16">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                <polyline points="22,6 12,13 2,6"/>
-              </svg>
-            }
+            placeholder="3001234567"
+            isPhone
           />
 
           <Field
@@ -160,18 +201,56 @@ const LoginPage: React.FC = () => {
             }
           />
 
-          <Field
-            label="Admin Secret Key"
-            type={showPass ? 'text' : 'password'}
-            value={secret}
-            onChange={setSecret}
-            placeholder="Enter admin secret key"
-            icon={
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="16" height="16">
-                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
-              </svg>
-            }
-          />
+          {/* Master Admin Toggle */}
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            cursor: 'pointer',
+            padding: '12px',
+            background: isMasterAdmin ? '#00674f15' : '#0a1a15',
+            border: '1px solid #1e3d30',
+            borderRadius: '10px',
+            userSelect: 'none',
+            transition: 'all 0.2s ease',
+          }}>
+            <input
+              type="checkbox"
+              checked={isMasterAdmin}
+              onChange={e => setIsMasterAdmin(e.target.checked)}
+              style={{
+                accentColor: '#00674F',
+                width: '16px',
+                height: '16px',
+                cursor: 'pointer',
+              }}
+            />
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: '#e8f5f0' }}>
+                Login as Master Admin
+              </span>
+              <span style={{ fontSize: '10px', color: '#878787' }}>
+                For Super Admin or default administrator account
+              </span>
+            </div>
+          </label>
+
+          {isMasterAdmin && (
+            <div style={{ animation: 'fadeIn 0.2s ease-out' }}>
+              <Field
+                label="Admin Secret Key"
+                type={showPass ? 'text' : 'password'}
+                value={secret}
+                onChange={setSecret}
+                placeholder="Enter admin secret key"
+                icon={
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="16" height="16">
+                    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+                  </svg>
+                }
+              />
+            </div>
+          )}
 
           {/* Show/hide passwords toggle */}
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none' }}>

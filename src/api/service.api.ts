@@ -33,6 +33,7 @@ export interface Service {
   /** Array of bullet-point strings returned from the API */
   not_includes: string[];
   is_top_service: boolean;
+  can_be_repaired: boolean;
   parent_category_id: string;
   image_url?: string | null;
   created_at: string;
@@ -49,13 +50,14 @@ export interface ServicePayload {
   includes?: string[];
   not_includes?: string[];
   is_top_service?: boolean;
+  can_be_repaired?: boolean;
   parent_category_id: string;
 }
 
 // ─── Parent Categories ──────────────────────────────────────────────────
 
-export const getParentCategories = () =>
-  api.get<ParentCategory[]>('/admin/services/parent-categories').then(r => r.data);
+export const getParentCategories = (filters?: { page?: number; limit?: number; search?: string }) =>
+  api.get<any>('/admin/services/parent-categories', { params: filters }).then(r => r.data);
 
 export const addParentCategory = (name: string, description?: string) =>
   api.post('/admin/services/parent-categories', { name, description }).then(r => r.data);
@@ -68,8 +70,8 @@ export const deleteParentCategory = (id: string) =>
 
 // ─── Categories ────────────────────────────────────────────────────────
 
-export const getCategories = () =>
-  api.get<ServiceCategory[]>('/admin/services/categories').then(r => r.data);
+export const getCategories = (filters?: { parent_category_id?: string; page?: number; limit?: number; search?: string }) =>
+  api.get<any>('/admin/services/categories', { params: filters }).then(r => r.data);
 
 export const addCategory = (name: string, parent_category_id: string, description?: string, long_description?: string) =>
   api.post('/admin/services/categories', { name, parent_category_id, description, long_description }).then(r => r.data);
@@ -82,12 +84,8 @@ export const deleteCategory = (id: string) =>
 
 // ─── Services ──────────────────────────────────────────────────────────
 
-export const getServices = (category_id?: string) =>
-  api
-    .get<Service[]>('/admin/services/services', {
-      params: category_id ? { category_id } : {},
-    })
-    .then(r => r.data);
+export const getServices = (filters?: { category_id?: string; parent_category_id?: string; is_top_service?: string; page?: number; limit?: number; search?: string }) =>
+  api.get<any>('/admin/services/services', { params: filters }).then(r => r.data);
 
 export const addService = (data: ServicePayload) =>
   api.post('/admin/services/services', data).then(r => r.data);

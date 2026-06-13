@@ -2,11 +2,12 @@ import React, { useEffect, useState, useCallback } from 'react';
 import {
   getCities, addCity, updateCity, deleteCity,
   getAreas, addArea, updateArea, deleteArea,
-  type City, type Area,
+  importAreasExcel, type City, type Area,
 } from '../api/location.api';
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
 import { toast } from '../components/ui/Toast';
+import Pagination from '../components/ui/Pagination';
 
 // ─── Shared Form Input ──────────────────────────────────────────────────
 const Input: React.FC<{
@@ -37,7 +38,14 @@ const Table: React.FC<{
   onEdit: (row: any) => void;
   onDelete: (row: any) => void;
   emptyText?: string;
-}> = ({ columns, rows, onEdit, onDelete, emptyText = 'No records found.' }) => (
+  pagination?: {
+    currentPage: number;
+    totalItems: number;
+    pageSize: number;
+    onPageChange: (page: number) => void;
+    onPageSizeChange: (size: number) => void;
+  };
+}> = ({ columns, rows, onEdit, onDelete, emptyText = 'No records found.', pagination }) => (
   <div style={{ background: '#122b22', border: '1px solid #1e3d30', borderRadius: '12px', overflow: 'hidden' }}>
     {/* Header */}
     <div style={{ display: 'flex', padding: '12px 16px', borderBottom: '1px solid #1e3d30', background: '#0d241c' }}>
@@ -59,7 +67,7 @@ const Table: React.FC<{
           key={row.id ?? i}
           style={{
             display: 'flex', alignItems: 'center', padding: '13px 16px',
-            borderBottom: i < rows.length - 1 ? '1px solid #1e3d3060' : 'none',
+            borderBottom: (i < rows.length - 1 || !!pagination) ? '1px solid #1e3d3060' : 'none',
             transition: 'background 0.12s',
           }}
           onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#183828'}
@@ -76,6 +84,15 @@ const Table: React.FC<{
           </div>
         </div>
       ))
+    )}
+    {pagination && (
+      <Pagination
+        currentPage={pagination.currentPage}
+        totalItems={pagination.totalItems}
+        pageSize={pagination.pageSize}
+        onPageChange={pagination.onPageChange}
+        onPageSizeChange={pagination.onPageSizeChange}
+      />
     )}
   </div>
 );
@@ -102,13 +119,24 @@ const Tab: React.FC<{ label: string; active: boolean; onClick: () => void }> = (
 const LocationsPage: React.FC = () => {
   const [tab, setTab] = useState<'cities' | 'areas'>('cities');
 
+  // ── Excel Import State ──
+  const [importModal, setImportModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+
   // ── Cities State ──
   const [cities, setCities]       = useState<City[]>([]);
+  const [allCities, setAllCities] = useState<City[]>([]);
   const [cityLoading, setCityLoading] = useState(true);
   const [cityModal, setCityModal] = useState(false);
   const [editCity, setEditCity]   = useState<City | null>(null);
   const [cityName, setCityName]   = useState('');
   const [citySaving, setCitySaving] = useState(false);
+  const [citySearch, setCitySearch] = useState('');
+  const [cityDebouncedSearch, setCityDebouncedSearch] = useState('');
+  const [cityPage, setCityPage] = useState(1);
+  const [cityPageSize, setCityPageSize] = useState(10);
+  const [cityTotal, setCityTotal] = useState(0);
 
   // ── Areas State ──
   const [areas, setAreas]         = useState<Area[]>([]);
@@ -118,6 +146,11 @@ const LocationsPage: React.FC = () => {
   const [areaName, setAreaName]   = useState('');
   const [areaCityId, setAreaCityId] = useState('');
   const [areaSaving, setAreaSaving] = useState(false);
+  const [areaSearch, setAreaSearch] = useState('');
+  const [areaDebouncedSearch, setAreaDebouncedSearch] = useState('');
+  const [areaPage, setAreaPage] = useState(1);
+  const [areaPageSize, setAreaPageSize] = useState(10);
+  const [areaTotal, setAreaTotal] = useState(0);
 
   // ── Delete confirm ──
   const [deleteModal, setDeleteModal] = useState(false);
@@ -125,18 +158,78 @@ const LocationsPage: React.FC = () => {
   const [deleteType, setDeleteType] = useState<'city' | 'area'>('city');
   const [deleting, setDeleting] = useState(false);
 
+  // Debouncing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCityDebouncedSearch(citySearch);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [citySearch]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setAreaDebouncedSearch(areaSearch);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [areaSearch]);
+
+  // Reset pages
+  useEffect(() => {
+    setCityPage(1);
+  }, [cityDebouncedSearch]);
+
+  useEffect(() => {
+    setAreaPage(1);
+  }, [areaDebouncedSearch]);
+
   // ── Load ──
+  const loadAllCities = useCallback(async () => {
+    try {
+      const res = await getCities();
+      const list = Array.isArray(res) ? res : res.data || [];
+      setAllCities(list);
+    } catch {
+      toast('Failed to load cities list for lookup', 'error');
+    }
+  }, []);
+
   const loadCities = useCallback(async () => {
     setCityLoading(true);
-    try { setCities(await getCities()); } catch { toast('Failed to load cities', 'error'); }
-    finally { setCityLoading(false); }
-  }, []);
+    try {
+      const result = await getCities({
+        page: cityPage,
+        limit: cityPageSize,
+        search: cityDebouncedSearch.trim() || undefined,
+      });
+      setCities(result.data);
+      setCityTotal(result.total);
+    } catch {
+      toast('Failed to load cities', 'error');
+    } finally {
+      setCityLoading(false);
+    }
+  }, [cityPage, cityPageSize, cityDebouncedSearch]);
 
   const loadAreas = useCallback(async () => {
     setAreaLoading(true);
-    try { setAreas(await getAreas()); } catch { toast('Failed to load areas', 'error'); }
-    finally { setAreaLoading(false); }
-  }, []);
+    try {
+      const result = await getAreas({
+        page: areaPage,
+        limit: areaPageSize,
+        search: areaDebouncedSearch.trim() || undefined,
+      });
+      setAreas(result.data);
+      setAreaTotal(result.total);
+    } catch {
+      toast('Failed to load areas', 'error');
+    } finally {
+      setAreaLoading(false);
+    }
+  }, [areaPage, areaPageSize, areaDebouncedSearch]);
+
+  useEffect(() => {
+    loadAllCities();
+  }, [loadAllCities]);
 
   useEffect(() => { loadCities(); }, [loadCities]);
   useEffect(() => { if (tab === 'areas') loadAreas(); }, [tab, loadAreas]);
@@ -152,6 +245,7 @@ const LocationsPage: React.FC = () => {
       else { await addCity(cityName); toast('City added'); }
       setCityModal(false);
       loadCities();
+      loadAllCities();
     } catch (e: any) {
       toast(e?.response?.data?.error || 'Failed to save city', 'error');
     } finally { setCitySaving(false); }
@@ -180,7 +274,12 @@ const LocationsPage: React.FC = () => {
   const doDelete = async () => {
     setDeleting(true);
     try {
-      if (deleteType === 'city') { await deleteCity(deleteTarget.id); toast('City deleted'); loadCities(); }
+      if (deleteType === 'city') {
+        await deleteCity(deleteTarget.id);
+        toast('City deleted');
+        loadCities();
+        loadAllCities();
+      }
       else { await deleteArea(deleteTarget.id); toast('Area deleted'); loadAreas(); }
       setDeleteModal(false);
     } catch (e: any) {
@@ -188,8 +287,26 @@ const LocationsPage: React.FC = () => {
     } finally { setDeleting(false); }
   };
 
+  const handleImportExcel = async () => {
+    if (!selectedFile) return toast('Please select an Excel file', 'warning');
+    setImporting(true);
+    try {
+      const res = await importAreasExcel(selectedFile);
+      toast(`${res.message} (${res.citiesAdded} cities, ${res.areasAdded} areas added)`);
+      setImportModal(false);
+      setSelectedFile(null);
+      loadCities();
+      loadAllCities();
+      loadAreas();
+    } catch (e: any) {
+      toast(e?.response?.data?.error || 'Failed to import Excel file', 'error');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   // ── City name lookup ──
-  const cityName_lookup = (id: string) => cities.find(c => c.id === id)?.name ?? id;
+  const cityName_lookup = (id: string) => allCities.find(c => c.id === id)?.name ?? id;
 
   return (
     <div style={{ animation: 'fadeIn 0.25s ease-out' }}>
@@ -199,47 +316,112 @@ const LocationsPage: React.FC = () => {
           <Tab label="Cities" active={tab === 'cities'} onClick={() => setTab('cities')} />
           <Tab label="Areas" active={tab === 'areas'} onClick={() => setTab('areas')} />
         </div>
-        <Button
-          variant="primary"
-          onClick={tab === 'cities' ? openAddCity : openAddArea}
-          icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>}
-        >
-          Add {tab === 'cities' ? 'City' : 'Area'}
-        </Button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <Button
+            variant="secondary"
+            onClick={() => { setSelectedFile(null); setImportModal(true); }}
+            icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>}
+          >
+            Import Excel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={tab === 'cities' ? openAddCity : openAddArea}
+            icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>}
+          >
+            Add {tab === 'cities' ? 'City' : 'Area'}
+          </Button>
+        </div>
       </div>
 
       {/* ── Cities Tab ── */}
       {tab === 'cities' && (
-        cityLoading ? (
-          <div style={{ textAlign: 'center', padding: '60px', color: '#4a6b5e' }}>Loading cities…</div>
-        ) : (
-          <Table
-            columns={[{ key: 'name', label: 'City Name' }, { key: 'created_at', label: 'Created', flex: 0.8 }]}
-            rows={cities.map(c => ({ ...c, created_at: new Date(c.created_at).toLocaleDateString() }))}
-            onEdit={openEditCity}
-            onDelete={r => confirmDelete(r, 'city')}
-            emptyText="No cities added yet. Click 'Add City' to get started."
-          />
-        )
+        <>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+            <div style={{ position: 'relative', width: '260px' }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="15" height="15"
+                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#4a6b5e' }}>
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input
+                value={citySearch}
+                onChange={e => setCitySearch(e.target.value)}
+                placeholder="Search cities…"
+                style={{
+                  padding: '9px 14px 9px 36px',
+                  background: '#0a1a15', border: '1px solid #1e3d30',
+                  borderRadius: '10px', color: '#e8f5f0', fontSize: '13px', width: '100%',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+          </div>
+          {cityLoading ? (
+            <div style={{ textAlign: 'center', padding: '60px', color: '#4a6b5e' }}>Loading cities…</div>
+          ) : (
+            <Table
+              columns={[{ key: 'name', label: 'City Name' }, { key: 'created_at', label: 'Created', flex: 0.8 }]}
+              rows={cities.map(c => ({ ...c, created_at: new Date(c.created_at).toLocaleDateString() }))}
+              onEdit={openEditCity}
+              onDelete={r => confirmDelete(r, 'city')}
+              emptyText="No cities added yet. Click 'Add City' to get started."
+              pagination={{
+                currentPage: cityPage,
+                totalItems: cityTotal,
+                pageSize: cityPageSize,
+                onPageChange: setCityPage,
+                onPageSizeChange: setCityPageSize,
+              }}
+            />
+          )}
+        </>
       )}
 
       {/* ── Areas Tab ── */}
       {tab === 'areas' && (
-        areaLoading ? (
-          <div style={{ textAlign: 'center', padding: '60px', color: '#4a6b5e' }}>Loading areas…</div>
-        ) : (
-          <Table
-            columns={[
-              { key: 'name', label: 'Area Name' },
-              { key: 'city_name', label: 'City', flex: 0.8 },
-              { key: 'created_at', label: 'Created', flex: 0.7 },
-            ]}
-            rows={areas.map(a => ({ ...a, city_name: cityName_lookup(a.city_id), created_at: new Date(a.created_at).toLocaleDateString() }))}
-            onEdit={openEditArea}
-            onDelete={r => confirmDelete(r, 'area')}
-            emptyText="No areas added yet."
-          />
-        )
+        <>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+            <div style={{ position: 'relative', width: '260px' }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="15" height="15"
+                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#4a6b5e' }}>
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input
+                value={areaSearch}
+                onChange={e => setAreaSearch(e.target.value)}
+                placeholder="Search areas…"
+                style={{
+                  padding: '9px 14px 9px 36px',
+                  background: '#0a1a15', border: '1px solid #1e3d30',
+                  borderRadius: '10px', color: '#e8f5f0', fontSize: '13px', width: '100%',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+          </div>
+          {areaLoading ? (
+            <div style={{ textAlign: 'center', padding: '60px', color: '#4a6b5e' }}>Loading areas…</div>
+          ) : (
+            <Table
+              columns={[
+                { key: 'name', label: 'Area Name' },
+                { key: 'city_name', label: 'City', flex: 0.8 },
+                { key: 'created_at', label: 'Created', flex: 0.7 },
+              ]}
+              rows={areas.map(a => ({ ...a, city_name: cityName_lookup(a.city_id), created_at: new Date(a.created_at).toLocaleDateString() }))}
+              onEdit={openEditArea}
+              onDelete={r => confirmDelete(r, 'area')}
+              emptyText="No areas added yet."
+              pagination={{
+                currentPage: areaPage,
+                totalItems: areaTotal,
+                pageSize: areaPageSize,
+                onPageChange: setAreaPage,
+                onPageSizeChange: setAreaPageSize,
+              }}
+            />
+          )}
+        </>
       )}
 
       {/* ── City Modal ── */}
@@ -290,7 +472,7 @@ const LocationsPage: React.FC = () => {
             }}
           >
             <option value="">Select a city…</option>
-            {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {allCities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
         <Input label="Area Name" value={areaName} onChange={setAreaName} placeholder="e.g. DHA Phase 5" required />
@@ -312,6 +494,80 @@ const LocationsPage: React.FC = () => {
           Are you sure you want to delete <strong style={{ color: '#f87171' }}>{deleteTarget?.name}</strong>?
           {deleteType === 'city' && <span style={{ color: '#878787', display: 'block', marginTop: '8px', fontSize: '13px' }}>This will also delete all areas under this city.</span>}
         </p>
+      </Modal>
+
+      {/* ── Import Excel Modal ── */}
+      <Modal
+        isOpen={importModal}
+        onClose={() => setImportModal(false)}
+        title="Import Service Areas"
+        subtitle="Batch upload cities and areas from an Excel sheet"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setImportModal(false)}>Cancel</Button>
+            <Button variant="primary" loading={importing} onClick={handleImportExcel}>
+              Import File
+            </Button>
+          </>
+        }
+      >
+        <div style={{ color: '#e8f5f0', fontSize: '14px', marginBottom: '20px', lineHeight: '1.5' }}>
+          <p style={{ margin: '0 0 10px 0', color: '#a3b899' }}>
+            Please upload an Excel file (<strong>.xlsx</strong> or <strong>.xls</strong>) with the following structure:
+          </p>
+          <div style={{ background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '8px', padding: '10px 14px', fontFamily: 'monospace', fontSize: '12px', color: '#4cb790', marginBottom: '16px' }}>
+            <div style={{ borderBottom: '1px solid #1e3d30', paddingBottom: '6px', fontWeight: 'bold', display: 'flex' }}>
+              <span style={{ flex: 1 }}>Column A</span>
+              <span style={{ flex: 1 }}>Column B</span>
+            </div>
+            <div style={{ display: 'flex', paddingTop: '6px', opacity: 0.8 }}>
+              <span style={{ flex: 1 }}>City Name (e.g. Lahore)</span>
+              <span style={{ flex: 1 }}>Area Name (e.g. Gulberg III)</span>
+            </div>
+          </div>
+          <p style={{ margin: 0, fontSize: '12px', color: '#878787' }}>
+            * Duplicate cities or areas will be matched case-insensitively and ignored safely.
+          </p>
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
+          <label 
+            style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              padding: '24px', 
+              background: '#071611', 
+              border: '2px dashed #1e3d30', 
+              borderRadius: '12px', 
+              cursor: 'pointer',
+              transition: 'border-color 0.15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = '#00674F'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = '#1e3d30'}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="#4cb790" strokeWidth={2} width="32" height="32" style={{ marginBottom: '8px' }}>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+            </svg>
+            <span style={{ fontSize: '14px', fontWeight: 600, color: '#e8f5f0', marginBottom: '4px', textAlign: 'center' }}>
+              {selectedFile ? selectedFile.name : 'Choose Excel File'}
+            </span>
+            <span style={{ fontSize: '11px', color: '#878787' }}>
+              {selectedFile ? `${(selectedFile.size / 1024).toFixed(1)} KB` : 'Click to browse files'}
+            </span>
+            <input 
+              type="file" 
+              accept=".xlsx, .xls" 
+              onChange={e => {
+                if (e.target.files && e.target.files[0]) {
+                  setSelectedFile(e.target.files[0]);
+                }
+              }} 
+              style={{ display: 'none' }} 
+            />
+          </label>
+        </div>
       </Modal>
     </div>
   );

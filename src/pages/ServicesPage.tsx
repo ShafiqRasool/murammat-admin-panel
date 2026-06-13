@@ -31,10 +31,6 @@ const btnPrimary: React.CSSProperties = {
   background: '#00674F', color: 'white', padding: '8px 16px', border: 'none',
   borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 600
 };
-const btnOutline: React.CSSProperties = {
-  background: 'transparent', color: '#878787', padding: '8px 16px', border: '1px solid #1e3d30',
-  borderRadius: '8px', cursor: 'pointer', fontSize: '14px'
-};
 
 // ─── Input ──────────────────────────────────────────────────────────────
 const Input: React.FC<{
@@ -159,6 +155,68 @@ const ServicesPage: React.FC = () => {
   const [loading, setLoading]       = useState(false);
   const [svcLoading, setSvcLoading] = useState(true);
 
+  // Reference lists for lookups/selects (unpaginated)
+  const [allParentCategories, setAllParentCategories] = useState<ParentCategory[]>([]);
+  const [allCategories, setAllCategories] = useState<ServiceCategory[]>([]);
+
+  // ── Parent Category Pagination & Search ──
+  const [parentCatPage, setParentCatPage] = useState(1);
+  const [parentCatPageSize, setParentCatPageSize] = useState(10);
+  const [parentCatTotal, setParentCatTotal] = useState(0);
+  const [parentCatSearch, setParentCatSearch] = useState('');
+  const [parentCatDebouncedSearch, setParentCatDebouncedSearch] = useState('');
+
+  // ── Category Pagination & Search ──
+  const [catPage, setCatPage] = useState(1);
+  const [catPageSize, setCatPageSize] = useState(10);
+  const [catTotal, setCatTotal] = useState(0);
+  const [catSearch, setCatSearch] = useState('');
+  const [catDebouncedSearch, setCatDebouncedSearch] = useState('');
+
+  // ── Service Pagination & Search ──
+  const [svcPage, setSvcPage] = useState(1);
+  const [svcPageSize, setSvcPageSize] = useState(10);
+  const [svcTotal, setSvcTotal] = useState(0);
+  const [svcSearch, setSvcSearch] = useState('');
+  const [svcDebouncedSearch, setSvcDebouncedSearch] = useState('');
+
+  // Debounce parent categories search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setParentCatDebouncedSearch(parentCatSearch);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [parentCatSearch]);
+
+  // Debounce categories search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCatDebouncedSearch(catSearch);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [catSearch]);
+
+  // Debounce services search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSvcDebouncedSearch(svcSearch);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [svcSearch]);
+
+  // Reset page when search or tab changes
+  useEffect(() => {
+    setParentCatPage(1);
+  }, [parentCatDebouncedSearch]);
+
+  useEffect(() => {
+    setCatPage(1);
+  }, [catDebouncedSearch]);
+
+  useEffect(() => {
+    setSvcPage(1);
+  }, [svcDebouncedSearch]);
+
   // ── Parent Category State ──
   const [parentCatModal, setParentCatModal] = useState(false);
   const [editParentCat, setEditParentCat] = useState<ParentCategory | null>(null);
@@ -192,6 +250,7 @@ const ServicesPage: React.FC = () => {
   const [svcIncludes, setSvcIncludes]   = useState<string[]>([]);
   const [svcExcludes, setSvcExcludes]   = useState<string[]>([]);
   const [svcIsTop, setSvcIsTop]         = useState(false);
+  const [svcCanBeRepaired, setSvcCanBeRepaired] = useState(false);
   const [svcImageFile, setSvcImageFile] = useState<File | null>(null);
   const [svcImagePreview, setSvcImagePreview] = useState<string | null>(null);
   const [svcSaving, setSvcSaving]       = useState(false);
@@ -203,29 +262,87 @@ const ServicesPage: React.FC = () => {
   const [deleting, setDeleting]         = useState(false);
 
   // ── Data loaders ──
+  const loadAllParentCats = useCallback(async () => {
+    try {
+      const res = await getParentCategories();
+      const list = Array.isArray(res) ? res : res.data || [];
+      setAllParentCategories(list);
+    } catch {
+      console.error('Failed to load all parent categories');
+    }
+  }, []);
+
+  const loadAllCats = useCallback(async () => {
+    try {
+      const res = await getCategories();
+      const list = Array.isArray(res) ? res : res.data || [];
+      setAllCategories(list);
+    } catch {
+      console.error('Failed to load all categories');
+    }
+  }, []);
+
   const loadParentCats = useCallback(async () => {
     setLoading(true);
-    try { setParentCategories(await getParentCategories()); }
-    catch (e) { toast('Failed to load parent categories', 'error'); }
-    finally { setLoading(false); }
-  }, []);
+    try {
+      const result = await getParentCategories({
+        page: parentCatPage,
+        limit: parentCatPageSize,
+        search: parentCatDebouncedSearch.trim() || undefined,
+      });
+      setParentCategories(result.data);
+      setParentCatTotal(result.total);
+    } catch {
+      toast('Failed to load parent categories', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [parentCatPage, parentCatPageSize, parentCatDebouncedSearch]);
 
   const loadCats = useCallback(async () => {
     setLoading(true);
-    try { setCategories(await getCategories()); }
-    catch (e) { toast('Failed to load categories', 'error'); }
-    finally { setLoading(false); }
-  }, []);
+    try {
+      const result = await getCategories({
+        page: catPage,
+        limit: catPageSize,
+        search: catDebouncedSearch.trim() || undefined,
+      });
+      setCategories(result.data);
+      setCatTotal(result.total);
+    } catch {
+      toast('Failed to load categories', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [catPage, catPageSize, catDebouncedSearch]);
 
   const loadSvcs = useCallback(async () => {
     setSvcLoading(true);
-    try { setServices(await getServices()); }
-    catch { toast('Failed to load services', 'error'); }
-    finally { setSvcLoading(false); }
-  }, []);
+    try {
+      const result = await getServices({
+        page: svcPage,
+        limit: svcPageSize,
+        search: svcDebouncedSearch.trim() || undefined,
+      });
+      setServices(result.data);
+      setSvcTotal(result.total);
+    } catch {
+      toast('Failed to load services', 'error');
+    } finally {
+      setSvcLoading(false);
+    }
+  }, [svcPage, svcPageSize, svcDebouncedSearch]);
 
-  useEffect(() => { loadParentCats(); loadCats(); }, [loadParentCats, loadCats]);
-  useEffect(() => { if (tab === 'services') loadSvcs(); }, [tab, loadSvcs]);
+  useEffect(() => {
+    loadAllParentCats();
+    loadAllCats();
+  }, [loadAllParentCats, loadAllCats]);
+
+  useEffect(() => {
+    if (tab === 'parent_categories') loadParentCats();
+    if (tab === 'categories') loadCats();
+    if (tab === 'services') loadSvcs();
+  }, [tab, loadParentCats, loadCats, loadSvcs]);
 
   // ── Parent Category CRUD ──
   const openAddParentCat  = () => { setEditParentCat(null); setParentCatName(''); setParentCatDesc(''); setParentCatImageFile(null); setParentCatImagePreview(null); setParentCatModal(true); };
@@ -249,7 +366,7 @@ const ServicesPage: React.FC = () => {
       if (parentCatImageFile && parentCatId) {
         await uploadParentCategoryImage(parentCatId, parentCatImageFile);
       }
-      toast('Parent category saved'); setParentCatModal(false); loadParentCats();
+      toast('Parent category saved'); setParentCatModal(false); loadParentCats(); loadAllParentCats();
     } catch (e: any) { toast(e?.response?.data?.error || 'Failed', 'error'); }
     finally { setParentCatSaving(false); }
   };
@@ -278,7 +395,7 @@ const ServicesPage: React.FC = () => {
       if (catImageFile && categoryId) {
         await uploadCategoryImage(categoryId, catImageFile);
       }
-      toast('Category saved'); setCatModal(false); loadCats();
+      toast('Category saved'); setCatModal(false); loadCats(); loadAllCats();
     } catch (e: any) { toast(e?.response?.data?.error || 'Failed', 'error'); }
     finally { setCatSaving(false); }
   };
@@ -289,7 +406,7 @@ const ServicesPage: React.FC = () => {
     setSvcCatId(''); setSvcParentCatId(''); setSvcPrice(''); setSvcDiscount('');
     setSvcIncludes([]); setSvcExcludes([]);
     setSvcImageFile(null); setSvcImagePreview(null);
-    setSvcIsTop(false);
+    setSvcIsTop(false); setSvcCanBeRepaired(false);
   };
 
   const openAddSvc = () => { setEditSvc(null); resetSvcForm(); setSvcModal(true); };
@@ -306,6 +423,7 @@ const ServicesPage: React.FC = () => {
     setSvcIncludes(Array.isArray(s.includes) ? s.includes : []);
     setSvcExcludes(Array.isArray(s.not_includes) ? s.not_includes : []);
     setSvcIsTop(s.is_top_service ?? false);
+    setSvcCanBeRepaired(s.can_be_repaired ?? false);
     setSvcImagePreview(s.image_url ? (s.image_url.startsWith('http') ? s.image_url : `http://localhost:3000${s.image_url}`) : null);
     setSvcModal(true);
   };
@@ -314,7 +432,7 @@ const ServicesPage: React.FC = () => {
     if (!svcName.trim() || !svcCatId || !svcParentCatId) return toast('Fields are required', 'warning');
     setSvcSaving(true);
     try {
-      const payload = { category_id: svcCatId, parent_category_id: svcParentCatId, name: svcName, small_description: svcSmallDesc, description: svcDesc, base_price: parseFloat(svcPrice) || 0, discounted_price: svcDiscount ? parseFloat(svcDiscount) : null, includes: svcIncludes, not_includes: svcExcludes, is_top_service: svcIsTop };
+      const payload = { category_id: svcCatId, parent_category_id: svcParentCatId, name: svcName, small_description: svcSmallDesc, description: svcDesc, base_price: parseFloat(svcPrice) || 0, discounted_price: svcDiscount ? parseFloat(svcDiscount) : null, includes: svcIncludes, not_includes: svcExcludes, is_top_service: svcIsTop, can_be_repaired: svcCanBeRepaired };
       if (editSvc) { await updateService(editSvc.id, payload); if (svcImageFile) await uploadServiceImage(editSvc.id, svcImageFile); toast('Updated'); }
       else { const res: any = await addService(payload); if (svcImageFile) await uploadServiceImage(res.service.id, svcImageFile); toast('Added'); }
       setSvcModal(false); loadSvcs();
@@ -333,19 +451,30 @@ const ServicesPage: React.FC = () => {
     setDeleteTarget(item); setDeleteType(type); setDeleteModal(true);
   };
 
+  // ── Delete action ──
   const doDelete = async () => {
+    if (!deleteTarget) return;
     setDeleting(true);
     try {
-      if (deleteType === 'parent_category') { await deleteParentCategory(deleteTarget.id); loadParentCats(); }
-      else if (deleteType === 'category')   { await deleteCategory(deleteTarget.id); loadCats(); }
-      else                                  { await deleteService(deleteTarget.id);  loadSvcs(); }
+      if (deleteType === 'parent_category') {
+        await deleteParentCategory(deleteTarget.id);
+        loadParentCats();
+        loadAllParentCats();
+      } else if (deleteType === 'category') {
+        await deleteCategory(deleteTarget.id);
+        loadCats();
+        loadAllCats();
+      } else {
+        await deleteService(deleteTarget.id);
+        loadSvcs();
+      }
       setDeleteModal(false); toast('Deleted successfully');
     } catch (e: any) { toast(e?.response?.data?.error || 'Failed to delete', 'error'); }
     finally { setDeleting(false); }
   };
 
-  const parentCatName_lookup = (id: string) => parentCategories.find(c => c.id === id)?.name || '—';
-  const catName_lookup = (id: string) => categories.find(c => c.id === id)?.name || '—';
+  const parentCatName_lookup = (id: string) => allParentCategories.find(c => c.id === id)?.name || '—';
+  const catName_lookup = (id: string) => allCategories.find(c => c.id === id)?.name || '—';
 
   return (
     <div style={{ animation: 'fadeIn 0.25s ease-out' }}>
@@ -359,19 +488,69 @@ const ServicesPage: React.FC = () => {
 
       {tab === 'parent_categories' && (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
-            <h2>Parent Categories</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', alignItems: 'center' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#e8f5f0', margin: 0 }}>Parent Categories</h2>
             <button onClick={openAddParentCat} style={btnPrimary}>+ Add Parent Category</button>
           </div>
-          <Table columns={[{ key: 'name', label: 'Name' }, { key: 'description', label: 'Description', flex: 2 }]} rows={parentCategories} onEdit={openEditParentCat} onDelete={r => confirmDelete(r, 'parent_category')} />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+            <div style={{ position: 'relative', width: '260px' }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="15" height="15"
+                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#4a6b5e' }}>
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input
+                value={parentCatSearch}
+                onChange={e => setParentCatSearch(e.target.value)}
+                placeholder="Search parent categories…"
+                style={{
+                  padding: '9px 14px 9px 36px',
+                  background: '#0a1a15', border: '1px solid #1e3d30',
+                  borderRadius: '10px', color: '#e8f5f0', fontSize: '13px', width: '100%',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+          </div>
+          <Table
+            columns={[{ key: 'name', label: 'Name' }, { key: 'description', label: 'Description', flex: 2 }]}
+            rows={parentCategories}
+            onEdit={openEditParentCat}
+            onDelete={r => confirmDelete(r, 'parent_category')}
+            pagination={{
+              currentPage: parentCatPage,
+              totalItems: parentCatTotal,
+              pageSize: parentCatPageSize,
+              onPageChange: setParentCatPage,
+              onPageSizeChange: setParentCatPageSize,
+            }}
+          />
         </div>
       )}
 
       {tab === 'categories' && (
         <div className="animate-fade-in">
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#e8f5f0' }}>Sub Categories</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', alignItems: 'center' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#e8f5f0', margin: 0 }}>Sub Categories</h2>
             <button onClick={openAddCat} style={btnPrimary}>+ Add Sub Category</button>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+            <div style={{ position: 'relative', width: '260px' }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="15" height="15"
+                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#4a6b5e' }}>
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input
+                value={catSearch}
+                onChange={e => setCatSearch(e.target.value)}
+                placeholder="Search sub categories…"
+                style={{
+                  padding: '9px 14px 9px 36px',
+                  background: '#0a1a15', border: '1px solid #1e3d30',
+                  borderRadius: '10px', color: '#e8f5f0', fontSize: '13px', width: '100%',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
           </div>
           {loading ? ( <div style={{ color: '#878787', padding: '40px', textAlign: 'center' }}>Loading...</div> ) : (
             <Table
@@ -386,6 +565,13 @@ const ServicesPage: React.FC = () => {
               }))}
               onEdit={openEditCat}
               onDelete={r => confirmDelete(r, 'category')}
+              pagination={{
+                currentPage: catPage,
+                totalItems: catTotal,
+                pageSize: catPageSize,
+                onPageChange: setCatPage,
+                onPageSizeChange: setCatPageSize,
+              }}
             />
           )}
         </div>
@@ -393,9 +579,28 @@ const ServicesPage: React.FC = () => {
 
       {tab === 'services' && (
         <div className="animate-fade-in">
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#e8f5f0' }}>Services</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', alignItems: 'center' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#e8f5f0', margin: 0 }}>Services</h2>
             <button onClick={openAddSvc} style={btnPrimary}>+ Add Service</button>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+            <div style={{ position: 'relative', width: '260px' }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="15" height="15"
+                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#4a6b5e' }}>
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input
+                value={svcSearch}
+                onChange={e => setSvcSearch(e.target.value)}
+                placeholder="Search services…"
+                style={{
+                  padding: '9px 14px 9px 36px',
+                  background: '#0a1a15', border: '1px solid #1e3d30',
+                  borderRadius: '10px', color: '#e8f5f0', fontSize: '13px', width: '100%',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
           </div>
           {svcLoading ? ( <div style={{ color: '#878787', padding: '40px', textAlign: 'center' }}>Loading...</div> ) : (
             <Table
@@ -413,6 +618,13 @@ const ServicesPage: React.FC = () => {
               }))}
               onEdit={openEditSvc}
               onDelete={r => confirmDelete(r, 'service')}
+              pagination={{
+                currentPage: svcPage,
+                totalItems: svcTotal,
+                pageSize: svcPageSize,
+                onPageChange: setSvcPage,
+                onPageSizeChange: setSvcPageSize,
+              }}
             />
           )}
         </div>
@@ -480,7 +692,7 @@ const ServicesPage: React.FC = () => {
             style={{ ...inputStyle, color: catParentCatId ? '#e8f5f0' : '#4a6b5e' }}
           >
             <option value="">Select a parent…</option>
-            {parentCategories.map(pc => (
+            {allParentCategories.map(pc => (
               <option key={pc.id} value={pc.id}>{pc.name}</option>
             ))}
           </select>
@@ -538,7 +750,7 @@ const ServicesPage: React.FC = () => {
                 const newVal = e.target.value;
                 setSvcParentCatId(newVal);
                 // Clear selected sub category if it doesn't belong to new parent
-                const selectedCat = categories.find(c => c.id === svcCatId);
+                const selectedCat = allCategories.find(c => c.id === svcCatId);
                 if (selectedCat && selectedCat.parent_category_id !== newVal) {
                   setSvcCatId('');
                 }
@@ -546,7 +758,7 @@ const ServicesPage: React.FC = () => {
               style={{ ...inputStyle, color: svcParentCatId ? '#e8f5f0' : '#4a6b5e' }}
             >
               <option value="">Select a parent…</option>
-              {parentCategories.map(pc => (
+              {allParentCategories.map(pc => (
                 <option key={pc.id} value={pc.id}>{pc.name}</option>
               ))}
             </select>
@@ -564,7 +776,7 @@ const ServicesPage: React.FC = () => {
               disabled={!svcParentCatId}
             >
               <option value="">Select a sub category…</option>
-              {categories
+              {allCategories
                 .filter(c => !svcParentCatId || c.parent_category_id === svcParentCatId)
                 .map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
@@ -592,7 +804,7 @@ const ServicesPage: React.FC = () => {
         </div>
 
         {/* ── Top Service Checkbox ── */}
-        <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', background: '#0a1a15', padding: '12px', borderRadius: '10px', border: '1px solid #1e3d30' }}>
+        <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', background: '#0a1a15', padding: '12px', borderRadius: '10px', border: '1px solid #1e3d30' }}>
           <input 
             type="checkbox" 
             id="isTopService" 
@@ -603,6 +815,23 @@ const ServicesPage: React.FC = () => {
           <label htmlFor="isTopService" style={{ fontSize: '13px', fontWeight: 600, color: '#e8f5f0', cursor: 'pointer', marginBottom: 0 }}>
             Mark as Top Service
           </label>
+        </div>
+
+        {/* ── Repair Checkbox ── */}
+        <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', background: '#0a1a15', padding: '12px', borderRadius: '10px', border: '1px solid #1e3d30' }}>
+          <input 
+            type="checkbox" 
+            id="canBeRepaired" 
+            checked={svcCanBeRepaired}
+            onChange={(e) => setSvcCanBeRepaired(e.target.checked)}
+            style={{ width: '18px', height: '18px', accentColor: '#e67e22', cursor: 'pointer' }}
+          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <label htmlFor="canBeRepaired" style={{ fontSize: '13px', fontWeight: 600, color: '#e8f5f0', cursor: 'pointer', marginBottom: 0 }}>
+              🔧 Allow Repair Status
+            </label>
+            <span style={{ fontSize: '11px', color: '#4a6b5e' }}>Provider can put this service's order into "Repair" mode (max 24h)</span>
+          </div>
         </div>
 
         {/* ── Pricing ── */}

@@ -17,8 +17,8 @@ export interface BlogPayload {
   author?: string;
 }
 
-export const getBlogs = () =>
-  api.get<Blog[]>('/admin/blogs').then(r => r.data);
+export const getBlogs = (filters?: { page?: number; limit?: number; search?: string }) =>
+  api.get<any>('/admin/blogs', { params: filters }).then(r => r.data);
 
 export const addBlog = (data: BlogPayload) =>
   api.post('/admin/blogs', data).then(r => r.data);

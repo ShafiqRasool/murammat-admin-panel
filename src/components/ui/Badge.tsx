@@ -21,11 +21,22 @@ const STYLES: Record<BadgeVariant, { bg: string; color: string; border: string; 
 // ─── Status label map ──────────────────────────────────────────────────
 export const statusVariant = (status: string): BadgeVariant => {
   switch (status?.toLowerCase()) {
-    case 'approved':   return 'success';
+    case 'approved':
+    case 'rated & reviewed':
+    case 'work done':
+      return 'success';
     case 'unapproved':
-    case 'pending':    return 'warning';
-    case 'rejected':   return 'error';
-    default:           return 'default';
+    case 'pending':
+    case 'bookingdone':
+      return 'warning';
+    case 'rejected':
+    case 'cancelled':
+      return 'error';
+    case 'technician assigned':
+    case 'work started':
+      return 'info';
+    default:
+      return 'default';
   }
 };
 

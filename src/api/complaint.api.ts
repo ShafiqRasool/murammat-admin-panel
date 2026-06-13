@@ -10,8 +10,8 @@ export interface Complaint {
   created_at: string;
 }
 
-export const getComplaints = () =>
-  api.get<Complaint[]>('/admin/complaints').then((res) => res.data);
+export const getComplaints = (filters?: { page?: number; limit?: number; search?: string }) =>
+  api.get<any>('/admin/complaints', { params: filters }).then((res) => res.data);
 
 export const updateComplaintStatus = (id: string, status: 'pending' | 'resolved') =>
   api.put(`/admin/complaints/${id}/resolve`, { status }).then((res) => res.data);

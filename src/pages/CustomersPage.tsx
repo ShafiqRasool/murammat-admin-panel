@@ -6,6 +6,8 @@ import { getCities, getAreas, type City, type Area } from '../api/location.api';
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
 import { toast } from '../components/ui/Toast';
+import { PhoneInput } from '../components/ui/PhoneInput';
+import Pagination from '../components/ui/Pagination';
 
 // ─── Period Tabs ─────────────────────────────────────────────────────────
 const PERIOD_TABS = [
@@ -71,12 +73,20 @@ const CustomersPage: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [period, setPeriod] = useState<CustomerFilters['period']>('all');
   const [categoryId, setCategoryId] = useState('all');
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [selected, setSelected] = useState<Customer | null>(null);
   const [customerBookings, setCustomerBookings] = useState<any[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalSpent, setTotalSpent] = useState(0);
+  const [totalBookings, setTotalBookings] = useState(0);
 
   useEffect(() => {
     if (selected) {
@@ -113,38 +123,42 @@ const CustomersPage: React.FC = () => {
     }
   }, [form.city_id]);
 
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [period, categoryId, debouncedSearch]);
+
   // ── Load customers ──
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getCustomers({
+      const result = await getCustomers({
         period,
         category_id: categoryId !== 'all' ? categoryId : undefined,
+        page: currentPage,
+        limit: pageSize,
+        search: debouncedSearch.trim() || undefined,
       });
-      setCustomers(data);
+      setCustomers(result.data);
+      setTotalItems(result.total);
+      setTotalSpent(result.totalSpent);
+      setTotalBookings(result.totalBookings);
     } catch {
       toast('Failed to load customers', 'error');
     } finally {
       setLoading(false);
     }
-  }, [period, categoryId]);
+  }, [period, categoryId, currentPage, pageSize, debouncedSearch]);
 
   useEffect(() => { load(); }, [load]);
-
-  // ── Client-side search filter ──
-  const filtered = customers.filter(c => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      (c.first_name ?? '').toLowerCase().includes(q) ||
-      (c.last_name ?? '').toLowerCase().includes(q) ||
-      (c.email ?? '').toLowerCase().includes(q) ||
-      (c.phone ?? '').includes(q)
-    );
-  });
-
-  const totalSpent = filtered.reduce((s, c) => s + (c.total_spent || 0), 0);
-  const totalBookings = filtered.reduce((s, c) => s + (c.total_bookings || 0), 0);
 
   // ── Form helpers ──
   const setField = (key: keyof CreateCustomerPayload) => (
@@ -213,7 +227,7 @@ const CustomersPage: React.FC = () => {
       {/* ── Summary Stats ── */}
       {!loading && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '24px' }}>
-          <MiniStat label="Customers shown" value={filtered.length} color="#00674F" />
+          <MiniStat label="Customers shown" value={customers.length} color="#00674F" />
           <MiniStat label="Total Bookings" value={totalBookings} color="#0891b2" />
           <MiniStat label="Total Revenue" value={`PKR ${totalSpent.toLocaleString()}`} color="#8b5cf6" />
         </div>
@@ -279,7 +293,7 @@ const CustomersPage: React.FC = () => {
 
         {loading ? (
           <div style={{ padding: '60px', textAlign: 'center', color: '#4a6b5e' }}>Loading customers…</div>
-        ) : filtered.length === 0 ? (
+        ) : customers.length === 0 ? (
           <div style={{ padding: '60px', textAlign: 'center', color: '#4a6b5e' }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} width="48" height="48" style={{ marginBottom: '12px', opacity: 0.4 }}>
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
@@ -288,11 +302,11 @@ const CustomersPage: React.FC = () => {
             <div>No customers found</div>
           </div>
         ) : (
-          filtered.map((c, i) => (
+          customers.map((c, i) => (
             <div
               key={c.id}
               onClick={() => setSelected(c)}
-              style={{ display: 'flex', alignItems: 'center', padding: '14px 16px', borderBottom: i < filtered.length - 1 ? '1px solid #1e3d3060' : 'none', cursor: 'pointer', transition: 'background 0.12s' }}
+              style={{ display: 'flex', alignItems: 'center', padding: '14px 16px', borderBottom: i < customers.length - 1 ? '1px solid #1e3d3060' : 'none', cursor: 'pointer', transition: 'background 0.12s' }}
               onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#183828'}
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
             >
@@ -304,7 +318,7 @@ const CustomersPage: React.FC = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#e8f5f0', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {displayName(c)}
                     <span style={{ padding: '2px 6px', borderRadius: '4px', background: c.registration_method === 'manual' ? '#d9770630' : '#00674F30', color: c.registration_method === 'manual' ? '#d97706' : '#00c896', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }}>
-                      {c.registration_method === 'manual' ? 'Manual' : 'Registered'}
+                       {c.registration_method === 'manual' ? 'Manual' : 'Registered'}
                     </span>
                   </div>
                   <div style={{ fontSize: '11px', color: '#4a6b5e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.email || c.phone}</div>
@@ -328,6 +342,13 @@ const CustomersPage: React.FC = () => {
             </div>
           ))
         )}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+        />
       </div>
 
       {/* ── Detail Modal ── */}
@@ -451,7 +472,7 @@ const CustomersPage: React.FC = () => {
             {/* Phone */}
             <div>
               <label style={labelStyle}>Phone <span style={{ color: '#dc2626' }}>*</span></label>
-              <input id="cust-phone" required type="tel" value={form.phone} onChange={setField('phone')} placeholder="+92 300 1234567" style={inputStyle} />
+              <PhoneInput value={form.phone || ''} onChange={val => setForm(p => ({ ...p, phone: val }))} />
             </div>
 
             {/* Password */}

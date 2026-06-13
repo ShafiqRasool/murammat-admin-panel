@@ -11,8 +11,8 @@ export interface CallRequest {
   created_at: string;
 }
 
-export const getCallRequests = async (): Promise<CallRequest[]> => {
-  const response = await api.get('/admin/call-requests');
+export const getCallRequests = async (filters?: { page?: number; limit?: number; search?: string }): Promise<any> => {
+  const response = await api.get('/admin/call-requests', { params: filters });
   return response.data;
 };
 

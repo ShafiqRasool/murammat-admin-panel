@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { CallRequest } from '../api/callRequest.api';
 import { getCallRequests, updateCallRequestStatus } from '../api/callRequest.api';
@@ -11,21 +11,46 @@ const CallRequestsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const fetchRequests = async () => {
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch]);
+
+  const fetchRequests = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getCallRequests();
-      setRequests(data);
+      const result = await getCallRequests({
+        page: currentPage,
+        limit: pageSize,
+        search: debouncedSearch.trim() || undefined,
+      });
+      setRequests(result.data);
+      setTotalItems(result.total);
     } catch (error) {
       toast('Failed to fetch call requests', 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, pageSize, debouncedSearch]);
 
   useEffect(() => {
     fetchRequests();
-  }, []);
+  }, [fetchRequests]);
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     try {
@@ -75,6 +100,26 @@ const CallRequestsPage: React.FC = () => {
         </div>
       </div>
 
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+        <div style={{ position: 'relative', width: '260px' }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="15" height="15"
+            style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#4a6b5e' }}>
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search leads…"
+            style={{
+              padding: '9px 14px 9px 36px',
+              background: '#0a1a15', border: '1px solid #1e3d30',
+              borderRadius: '10px', color: '#e8f5f0', fontSize: '13px', width: '100%',
+              boxSizing: 'border-box'
+            }}
+          />
+        </div>
+      </div>
+
       <div style={{ background: '#0a1a15', borderRadius: '12px', padding: '20px', border: '1px solid #1e3d30' }}>
         {loading ? (
           <div style={{ color: '#878787', padding: '40px', textAlign: 'center' }}>Loading call requests...</div>
@@ -102,6 +147,13 @@ const CallRequestsPage: React.FC = () => {
               </div>
             )}
             emptyText="No call requests found."
+            pagination={{
+              currentPage,
+              totalItems,
+              pageSize,
+              onPageChange: setCurrentPage,
+              onPageSizeChange: setPageSize,
+            }}
           />
         )}
       </div>

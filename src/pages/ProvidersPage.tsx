@@ -1,9 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { getProviders, approveProvider, type Provider, type ApprovalStatus } from '../api/provider.api';
+import { getProviders, approveProvider, createProvider, updateProvider, type Provider, type ApprovalStatus, type CreateProviderPayload } from '../api/provider.api';
 import Badge, { statusVariant } from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { toast } from '../components/ui/Toast';
+import { PhoneInput } from '../components/ui/PhoneInput';
+import { getCategories, getServices, type ServiceCategory, type Service } from '../api/service.api';
+import { getCities, getAreas, type City, type Area } from '../api/location.api';
+import Pagination from '../components/ui/Pagination';
 
 // ─── Filter tabs ─────────────────────────────────────────────────────────
 type FilterTab = 'all' | 'unapproved' | 'approved' | 'rejected' | 'online' | 'offline';
@@ -17,32 +21,201 @@ const TABS: { key: FilterTab; label: string; color?: string }[] = [
   { key: 'offline',    label: '⚫ Offline',       color: '#4a6b5e' },
 ];
 
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '10px 14px',
+  background: '#0a1a15',
+  border: '1px solid #1e3d30',
+  borderRadius: '10px',
+  color: '#e8f5f0',
+  fontSize: '13px',
+  outline: 'none',
+  boxSizing: 'border-box',
+};
+
+const labelStyle: React.CSSProperties = {
+  fontSize: '12px',
+  fontWeight: 600,
+  color: '#878787',
+  marginBottom: '6px',
+  display: 'block',
+  textTransform: 'uppercase',
+  letterSpacing: '0.4px',
+};
+
 // ─── Providers Page ──────────────────────────────────────────────────────
 const ProvidersPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading]     = useState(true);
   const [search, setSearch]       = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Reset page when activeTab or debouncedSearch changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, debouncedSearch]);
 
   // ── Detail & action modals ──
   const [detailModal, setDetailModal] = useState(false);
   const [selected, setSelected]       = useState<Provider | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
+  // ── Manual Add Modal State ──
+  const [addOpen, setAddOpen] = useState(false);
+  const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  
+  const [categories, setCategories] = useState<ServiceCategory[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+
+  const [citiesList, setCitiesList] = useState<City[]>([]);
+  const [areasList, setAreasList] = useState<Area[]>([]);
+  const [allAreas, setAllAreas] = useState<Area[]>([]);
+  const [selectedCityId, setSelectedCityId] = useState<string>('');
+  const [selectedAreaId, setSelectedAreaId] = useState<string>('');
+
+  useEffect(() => {
+    getCategories().then(setCategories).catch(() => {});
+    getServices().then(setServices).catch(() => {});
+    getCities().then(setCitiesList).catch(() => {});
+    getAreas({}).then(setAllAreas).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (selectedCityId) {
+      getAreas(selectedCityId).then(setAreasList).catch(() => setAreasList([]));
+    } else {
+      setAreasList([]);
+    }
+  }, [selectedCityId]);
+
+  const emptyForm = (): CreateProviderPayload => ({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    company_name: '',
+    password: '',
+  });
+
+  const [form, setForm] = useState<CreateProviderPayload>(emptyForm());
+
+  const setField = (key: keyof CreateProviderPayload) => (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setForm(prev => ({
+      ...prev,
+      [key]: e.target.value,
+    }));
+  };
+
+  const handleEditClick = (p: Provider) => {
+    setEditingProvider(p);
+    setForm({
+      first_name: p.first_name || '',
+      last_name: p.last_name || '',
+      email: p.user_email || p.email || '',
+      phone: p.phone || '',
+      company_name: p.company_name || '',
+      password: '',
+    });
+    setSelectedCityId(p.city_ids?.[0] || '');
+    setSelectedAreaId(p.area_ids?.[0] || '');
+    setSelectedServices(p.service_ids || []);
+    setShowPassword(false);
+    setAddOpen(true);
+  };
+
+  const handleAddProvider = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.phone?.trim() || !form.company_name?.trim()) {
+      toast('Phone and company name are required', 'error');
+      return;
+    }
+    if (!editingProvider && !form.password?.trim()) {
+      toast('Password is required for new providers', 'error');
+      return;
+    }
+    if (!selectedCityId || !selectedAreaId) {
+      toast('City and Area selection are required', 'error');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      if (editingProvider) {
+        const updated = await updateProvider(editingProvider.provider_id, {
+          ...form,
+          service_ids: selectedServices,
+          area_ids: [selectedAreaId],
+        });
+        setProviders(prev => prev.map(p => p.provider_id === editingProvider.provider_id ? updated : p));
+        setAddOpen(false);
+        setEditingProvider(null);
+        setForm(emptyForm());
+        setSelectedServices([]);
+        setSelectedCityId('');
+        setSelectedAreaId('');
+        toast('Provider updated successfully', 'success');
+      } else {
+        const newProvider = await createProvider({
+          ...form,
+          service_ids: selectedServices,
+          area_ids: [selectedAreaId],
+        });
+        setProviders(prev => [newProvider, ...prev]);
+        setAddOpen(false);
+        setForm(emptyForm());
+        setSelectedServices([]);
+        setSelectedCityId('');
+        setSelectedAreaId('');
+        toast('Provider created successfully', 'success');
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.error ?? 'Failed to save provider';
+      toast(msg, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // ── Load ──
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      // Online/Offline are client-side filters — still fetch all (or by approval status)
       const approvalTab = ['online', 'offline'].includes(activeTab) ? undefined : activeTab as ApprovalStatus;
-      const status = approvalTab === 'all' ? undefined : approvalTab;
-      setProviders(await getProviders(status));
+      const status = activeTab === 'all' ? undefined : approvalTab;
+      const isOnline = activeTab === 'online' ? true : activeTab === 'offline' ? false : undefined;
+      const result = await getProviders({
+        status,
+        is_online: isOnline,
+        page: currentPage,
+        limit: pageSize,
+        search: debouncedSearch.trim() || undefined,
+      });
+      setProviders(result.data);
+      setTotalItems(result.total);
     } catch {
       toast('Failed to load providers', 'error');
     } finally {
       setLoading(false);
     }
-  }, [activeTab]);
+  }, [activeTab, currentPage, pageSize, debouncedSearch]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -65,28 +238,42 @@ const ProvidersPage: React.FC = () => {
     }
   };
 
-  // ── Filter by search ──
-  const filtered = providers.filter(p => {
-    // Online/Offline filter
-    if (activeTab === 'online'  && !p.is_online)  return false;
-    if (activeTab === 'offline' &&  p.is_online)  return false;
-
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      p.first_name?.toLowerCase().includes(q) ||
-      p.last_name?.toLowerCase().includes(q) ||
-      p.company_name?.toLowerCase().includes(q) ||
-      p.email?.toLowerCase().includes(q) ||
-      p.user_email?.toLowerCase().includes(q)
-    );
-  });
+  // Search & filter is handled server-side now.
 
   const providerDisplayName = (p: Provider) =>
     [p.first_name, p.last_name].filter(Boolean).join(' ') || 'Unnamed';
 
   return (
     <div style={{ animation: 'fadeIn 0.25s ease-out' }}>
+      {/* ── Header ── */}
+      <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#e8f5f0' }}>Service Providers</h2>
+          <p style={{ margin: '4px 0 0', color: '#878787', fontSize: '13px' }}>
+            Manage and approve service provider accounts
+          </p>
+        </div>
+        <button
+          id="add-provider-btn"
+          onClick={() => { setAddOpen(true); setEditingProvider(null); setForm(emptyForm()); setSelectedServices([]); setSelectedCityId(''); setSelectedAreaId(''); setShowPassword(false); }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '10px 20px', borderRadius: '10px', border: 'none',
+            background: 'linear-gradient(135deg, #00674F, #00a87a)',
+            color: '#fff', fontWeight: 700, fontSize: '13px',
+            cursor: 'pointer', transition: 'opacity 0.15s',
+            boxShadow: '0 4px 12px #00674F40',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+          onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} width="14" height="14">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Add Provider
+        </button>
+      </div>
+
       {/* ── Filter Tabs + Search ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         {/* Tabs */}
@@ -112,7 +299,7 @@ const ProvidersPage: React.FC = () => {
                   background: 'rgba(255,255,255,0.2)',
                   borderRadius: '10px', fontSize: '11px', fontWeight: 700,
                 }}>
-                  {providers.length}
+                  {totalItems}
                 </span>
               )}
             </button>
@@ -158,23 +345,23 @@ const ProvidersPage: React.FC = () => {
                 {c.label}
               </span>
             ))}
-            <span style={{ width: '130px', fontSize: '11px', fontWeight: 700, color: '#878787', textTransform: 'uppercase', textAlign: 'right' }}>
+            <span style={{ width: '160px', fontSize: '11px', fontWeight: 700, color: '#878787', textTransform: 'uppercase', textAlign: 'right' }}>
               Actions
             </span>
           </div>
 
           {/* Rows */}
-          {filtered.length === 0 ? (
+          {providers.length === 0 ? (
             <div style={{ padding: '60px', textAlign: 'center', color: '#4a6b5e', fontSize: '14px' }}>
               {search ? 'No providers match your search.' : 'No providers found in this category.'}
             </div>
           ) : (
-            filtered.map((p, i) => (
+            providers.map((p, i) => (
               <div
                 key={p.provider_id}
                 style={{
                   display: 'flex', alignItems: 'center', padding: '14px 16px',
-                  borderBottom: i < filtered.length - 1 ? '1px solid #1e3d3060' : 'none',
+                  borderBottom: i < providers.length - 1 ? '1px solid #1e3d3060' : 'none',
                   transition: 'background 0.12s', cursor: 'pointer',
                 }}
                 onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#183828'}
@@ -224,7 +411,38 @@ const ProvidersPage: React.FC = () => {
                   </Badge>
                 </div>
                 {/* Quick action buttons */}
-                <div style={{ width: '130px', display: 'flex', gap: '6px', justifyContent: 'flex-end' }} onClick={e => e.stopPropagation()}>
+                <div style={{ width: '160px', display: 'flex', gap: '6px', justifyContent: 'flex-end' }} onClick={e => e.stopPropagation()}>
+                  <button
+                    onClick={() => handleEditClick(p)}
+                    style={{
+                      padding: '6px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid #1e3d30',
+                      background: '#0a1a15',
+                      color: '#00a87a',
+                      fontWeight: 600,
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      transition: 'all 0.15s'
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = '#00674F20';
+                      e.currentTarget.style.borderColor = '#00674F';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = '#0a1a15';
+                      e.currentTarget.style.borderColor = '#1e3d30';
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="12" height="12">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    Edit
+                  </button>
                   {p.approval_status !== 'approved' && (
                     <Button
                       variant="primary" size="sm"
@@ -247,6 +465,13 @@ const ProvidersPage: React.FC = () => {
               </div>
             ))
           )}
+          <Pagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       )}
 
@@ -284,27 +509,260 @@ const ProvidersPage: React.FC = () => {
             </div>
           }
         >
-          {/* Current Status */}
-          <div style={{ marginBottom: '20px', padding: '12px 16px', background: '#0a1a15', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '13px', color: '#878787' }}>Current Status</span>
-            <Badge variant={statusVariant(selected.approval_status)}>{selected.approval_status}</Badge>
-          </div>
-
-          {/* Info Grid */}
-          {[
-            { label: 'Full Name',    value: providerDisplayName(selected) },
-            { label: 'Company',      value: selected.company_name || '—' },
-            { label: 'Email',        value: selected.user_email || selected.email || '—' },
-            { label: 'Phone',        value: selected.phone || '—' },
-            { label: 'Registered',   value: new Date(selected.created_at).toLocaleString() },
-          ].map(({ label, value }) => (
-            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #1e3d3050' }}>
-              <span style={{ fontSize: '13px', color: '#878787', fontWeight: 500 }}>{label}</span>
-              <span style={{ fontSize: '14px', color: '#e8f5f0', textAlign: 'right', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Header profile card */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: '#0a1a15', borderRadius: '12px', border: '1px solid #1e3d30' }}>
+              <div style={{
+                width: '54px', height: '54px', borderRadius: '50%',
+                background: '#00674F25', color: '#00a87a',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '20px', fontWeight: 800, border: '1px solid #00674F40', flexShrink: 0
+              }}>
+                {(selected.first_name?.[0] ?? selected.company_name?.[0] ?? '?').toUpperCase()}
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#e8f5f0' }}>{providerDisplayName(selected)}</h3>
+                <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#878787' }}>{selected.company_name || 'Individual'}</p>
+              </div>
+              <Badge variant={statusVariant(selected.approval_status)}>{selected.approval_status}</Badge>
             </div>
-          ))}
+
+            {/* Info Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ padding: '12px', background: '#0d241c50', borderRadius: '10px', border: '1px solid #1e3d3030' }}>
+                <span style={{ fontSize: '11px', color: '#878787', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Email Address</span>
+                <span style={{ fontSize: '13px', color: '#e8f5f0', wordBreak: 'break-all' }}>{selected.user_email || selected.email || '—'}</span>
+              </div>
+              <div style={{ padding: '12px', background: '#0d241c50', borderRadius: '10px', border: '1px solid #1e3d3030' }}>
+                <span style={{ fontSize: '11px', color: '#878787', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Phone Number</span>
+                <span style={{ fontSize: '13px', color: '#e8f5f0' }}>{selected.phone || '—'}</span>
+              </div>
+              <div style={{ gridColumn: 'span 2', padding: '12px', background: '#0d241c50', borderRadius: '10px', border: '1px solid #1e3d3030' }}>
+                <span style={{ fontSize: '11px', color: '#878787', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Registration Date</span>
+                <span style={{ fontSize: '13px', color: '#e8f5f0' }}>{new Date(selected.created_at).toLocaleString()}</span>
+              </div>
+            </div>
+
+            {/* Address / Service Areas */}
+            <div style={{ padding: '16px', background: '#0d241c50', borderRadius: '10px', border: '1px solid #1e3d3030' }}>
+              <span style={{ fontSize: '11px', color: '#00a87a', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '8px', letterSpacing: '0.5px' }}>Service Areas / Address</span>
+              {selected.area_ids && selected.area_ids.length > 0 ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {selected.area_ids.map(aid => {
+                    const area = allAreas.find(a => a.id === aid);
+                    if (!area) return null;
+                    const city = citiesList.find(c => c.id === area.city_id);
+                    return (
+                      <span key={aid} style={{ padding: '4px 10px', background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '6px', fontSize: '12px', color: '#e8f5f0' }}>
+                        📍 {area.name} ({city ? city.name : 'Unknown City'})
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <span style={{ fontSize: '13px', color: '#878787', fontStyle: 'italic' }}>No service areas assigned.</span>
+              )}
+            </div>
+
+            {/* Services & Skills */}
+            <div style={{ padding: '16px', background: '#0d241c50', borderRadius: '10px', border: '1px solid #1e3d3030' }}>
+              <span style={{ fontSize: '11px', color: '#00a87a', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '8px', letterSpacing: '0.5px' }}>Offered Services & Skills</span>
+              {selected.service_ids && selected.service_ids.length > 0 ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {selected.service_ids.map(sid => {
+                    const service = services.find(s => s.id === sid);
+                    if (!service) return null;
+                    return (
+                      <span key={sid} style={{ padding: '4px 10px', background: '#00674F15', border: '1px solid #00674F40', borderRadius: '6px', fontSize: '12px', color: '#00c896', fontWeight: 600 }}>
+                        🛠️ {service.name}
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <span style={{ fontSize: '13px', color: '#878787', fontStyle: 'italic' }}>No services selected.</span>
+              )}
+            </div>
+          </div>
         </Modal>
       )}
+
+      {/* ── Add Provider Modal ── */}
+      <Modal
+        isOpen={addOpen}
+        onClose={() => { setAddOpen(false); setEditingProvider(null); setForm(emptyForm()); setSelectedServices([]); setSelectedCityId(''); setSelectedAreaId(''); }}
+        title={editingProvider ? 'Edit Provider' : 'Add New Provider'}
+        subtitle={editingProvider ? `Modify profile details for ${providerDisplayName(editingProvider)}` : 'Manually create a service provider account'}
+        width="560px"
+        footer={
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+            <Button variant="ghost" onClick={() => { setAddOpen(false); setEditingProvider(null); setForm(emptyForm()); setSelectedServices([]); setSelectedCityId(''); setSelectedAreaId(''); }}>
+              Cancel
+            </Button>
+            <button
+              form="add-provider-form"
+              type="submit"
+              disabled={submitting}
+              style={{
+                padding: '10px 24px', borderRadius: '10px', border: 'none',
+                background: submitting ? '#1e3d30' : 'linear-gradient(135deg, #00674F, #00a87a)',
+                color: submitting ? '#4a6b5e' : '#fff',
+                fontWeight: 700, fontSize: '13px',
+                cursor: submitting ? 'not-allowed' : 'pointer',
+                transition: 'all 0.15s',
+              }}
+            >
+              {submitting ? 'Saving…' : (editingProvider ? 'Save Changes' : 'Create Provider')}
+            </button>
+          </div>
+        }
+      >
+        <form id="add-provider-form" onSubmit={handleAddProvider}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+            {/* Name row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={labelStyle}>First Name</label>
+                <input id="prov-first-name" value={form.first_name} onChange={setField('first_name')} placeholder="Ali" style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Last Name</label>
+                <input id="prov-last-name" value={form.last_name} onChange={setField('last_name')} placeholder="Khan" style={inputStyle} />
+              </div>
+            </div>
+
+            {/* Company Name */}
+            <div>
+              <label style={labelStyle}>Company Name <span style={{ color: '#dc2626' }}>*</span></label>
+              <input id="prov-company" required value={form.company_name} onChange={setField('company_name')} placeholder="Murammat Services" style={inputStyle} />
+            </div>
+
+            {/* Email */}
+            <div>
+              <label style={labelStyle}>Email</label>
+              <input id="prov-email" type="email" value={form.email} onChange={setField('email')} placeholder="provider@example.com" style={inputStyle} />
+            </div>
+
+            {/* Phone */}
+              <label style={labelStyle}>Phone <span style={{ color: '#dc2626' }}>*</span></label>
+              <PhoneInput value={form.phone || ''} onChange={val => setForm(p => ({ ...p, phone: val }))} />
+
+            {/* Password */}
+            <div>
+              <label style={labelStyle}>
+                Password {editingProvider ? <span style={{ color: '#878787', textTransform: 'lowercase', fontSize: '11px', fontWeight: 'normal' }}>(leave blank to keep current)</span> : <span style={{ color: '#dc2626' }}>*</span>}
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  id="prov-password"
+                  type={showPassword ? 'text' : 'password'}
+                  required={!editingProvider}
+                  value={form.password || ''}
+                  onChange={setField('password')}
+                  placeholder={editingProvider ? "Leave blank to keep current" : "Min. 8 characters"}
+                  style={{ ...inputStyle, paddingRight: '44px' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#4a6b5e', padding: 0 }}
+                >
+                  {showPassword ? (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="16" height="16">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                      <line x1="1" y1="1" x2="23" y2="23"/>
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="16" height="16">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Location (City + Area) */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', borderTop: '1px solid #1e3d30', paddingTop: '14px' }}>
+              <div>
+                <label style={labelStyle}>City <span style={{ color: '#dc2626' }}>*</span></label>
+                <select
+                  required
+                  id="prov-city"
+                  value={selectedCityId}
+                  onChange={e => {
+                    setSelectedCityId(e.target.value);
+                    setSelectedAreaId('');
+                  }}
+                  style={{ ...inputStyle, cursor: 'pointer' }}
+                >
+                  <option value="">— Select City —</option>
+                  {citiesList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Area <span style={{ color: '#dc2626' }}>*</span></label>
+                <select
+                  required
+                  id="prov-area"
+                  value={selectedAreaId}
+                  onChange={e => setSelectedAreaId(e.target.value)}
+                  disabled={!selectedCityId}
+                  style={{ ...inputStyle, cursor: selectedCityId ? 'pointer' : 'not-allowed', opacity: selectedCityId ? 1 : 0.5 }}
+                >
+                  <option value="">— Select Area —</option>
+                  {areasList.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Services checklist */}
+            <div style={{ borderTop: '1px solid #1e3d30', paddingTop: '14px', marginTop: '4px' }}>
+              <label style={labelStyle}>Select Services / Skills</label>
+              <div style={{ maxHeight: '200px', overflowY: 'auto', background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {categories.map(cat => {
+                  const catServices = services.filter(s => s.category_id === cat.id);
+                  if (catServices.length === 0) return null;
+                  return (
+                    <div key={cat.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <span style={{ fontSize: '11px', color: '#00a87a', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        {cat.name}
+                      </span>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                        {catServices.map(s => {
+                          const isChecked = selectedServices.includes(s.id);
+                          return (
+                            <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#e8f5f0' }}>
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={e => {
+                                  if (e.target.checked) {
+                                    setSelectedServices(prev => [...prev, s.id]);
+                                  } else {
+                                    setSelectedServices(prev => prev.filter(id => id !== s.id));
+                                  }
+                                }}
+                                style={{ accentColor: '#00674F', cursor: 'pointer' }}
+                              />
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {s.name}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

@@ -10,15 +10,20 @@ import DashboardPage from './pages/DashboardPage';
 import LocationsPage from './pages/LocationsPage';
 import ServicesPage from './pages/ServicesPage';
 import ProvidersPage from './pages/ProvidersPage';
+import CommissionsPage from './pages/CommissionsPage';
 import BookingsPage from './pages/BookingsPage';
 import ComplaintsPage from './pages/ComplaintsPage';
 import CustomersPage from './pages/CustomersPage';
 import BlogsPage from './pages/BlogsPage';
 import CallRequestsPage from './pages/CallRequestsPage';
+import BusinessInquiriesPage from './pages/BusinessInquiriesPage';
+import RolesAndStaffPage from './pages/RolesAndStaffPage';
+
+import Button from './components/ui/Button';
 
 // ─── Protected Route Wrapper ───────────────────────────────────────────
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+const ProtectedRoute: React.FC<{ children: React.ReactNode; permission?: string }> = ({ children, permission }) => {
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     // Full-screen loading spinner while checking session
@@ -38,7 +43,45 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     );
   }
 
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (permission && !user?.roles?.includes('super-admin')) {
+    const hasPerm = user?.permissions?.includes(permission);
+    if (!hasPerm) {
+      return (
+        <Layout>
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            minHeight: '60vh', padding: '40px', textAlign: 'center', animation: 'fadeIn 0.3s ease-out'
+          }}>
+            <div style={{
+              width: '80px', height: '80px', borderRadius: '50%', background: '#dc262615',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444',
+              marginBottom: '24px', boxShadow: '0 0 24px #dc262620'
+            }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="40" height="40">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </div>
+            <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#e8f5f0', margin: '0 0 10px' }}>
+              Access Denied
+            </h2>
+            <p style={{ color: '#878787', fontSize: '14px', maxWidth: '380px', margin: '0 0 24px', lineHeight: 1.5 }}>
+              You do not have the required permissions to view this section. Please contact your administrator if you believe this is an error.
+            </p>
+            <Button variant="secondary" onClick={() => window.history.back()}>
+              ← Go Back
+            </Button>
+          </div>
+        </Layout>
+      );
+    }
+  }
+
+  return <>{children}</>;
 };
 
 // ─── App Routes ────────────────────────────────────────────────────────
@@ -57,7 +100,7 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="view_dashboard">
             <Layout><DashboardPage /></Layout>
           </ProtectedRoute>
         }
@@ -65,7 +108,7 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/bookings"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="view_bookings">
             <Layout><BookingsPage /></Layout>
           </ProtectedRoute>
         }
@@ -73,7 +116,7 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/locations"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="view_locations">
             <Layout><LocationsPage /></Layout>
           </ProtectedRoute>
         }
@@ -81,7 +124,7 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/services"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="view_services">
             <Layout><ServicesPage /></Layout>
           </ProtectedRoute>
         }
@@ -89,15 +132,23 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/providers"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="view_providers">
             <Layout><ProvidersPage /></Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/commissions"
+        element={
+          <ProtectedRoute permission="view_providers">
+            <Layout><CommissionsPage /></Layout>
           </ProtectedRoute>
         }
       />
       <Route
         path="/complaints"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="view_complaints">
             <Layout><ComplaintsPage /></Layout>
           </ProtectedRoute>
         }
@@ -105,7 +156,7 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/customers"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="view_customers">
             <Layout><CustomersPage /></Layout>
           </ProtectedRoute>
         }
@@ -113,7 +164,7 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/blogs"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="view_blogs">
             <Layout><BlogsPage /></Layout>
           </ProtectedRoute>
         }
@@ -121,8 +172,24 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/call-requests"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="view_call_requests">
             <Layout><CallRequestsPage /></Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/business-inquiries"
+        element={
+          <ProtectedRoute permission="view_business_inquiries">
+            <Layout><BusinessInquiriesPage /></Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/roles-staff"
+        element={
+          <ProtectedRoute permission="manage_roles">
+            <Layout><RolesAndStaffPage /></Layout>
           </ProtectedRoute>
         }
       />

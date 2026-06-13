@@ -24,6 +24,9 @@ export interface Customer {
 export interface CustomerFilters {
   period?: 'today' | '7days' | '21days' | '30days' | 'all';
   category_id?: string;
+  page?: number;
+  limit?: number;
+  search?: string;
 }
 
 export interface CreateCustomerPayload {
@@ -39,9 +42,17 @@ export interface CreateCustomerPayload {
 
 import type { Booking } from './booking.api';
 
+// ─── API Response ────────────────────────────────────────────────────────
+export interface PaginatedCustomers {
+  data: Customer[];
+  total: number;
+  totalSpent: number;
+  totalBookings: number;
+}
+
 // ─── API Calls ─────────────────────────────────────────────────────────
 export const getCustomers = (filters: CustomerFilters = {}) =>
-  api.get<Customer[]>('/admin/customers', { params: filters }).then(r => r.data);
+  api.get<PaginatedCustomers>('/admin/customers', { params: filters }).then(r => r.data);
 
 export const getCustomerBookings = (id: string) =>
   api.get<Booking[]>(`/admin/customers/${id}/bookings`).then(r => r.data);

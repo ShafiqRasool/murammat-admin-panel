@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import type { Complaint } from '../api/complaint.api';
 import { getComplaints, updateComplaintStatus, deleteComplaint } from '../api/complaint.api';
 import Table from '../components/ui/Table';
@@ -14,21 +14,46 @@ const ComplaintsPage: React.FC = () => {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
 
-  const fetchComplaints = async () => {
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch]);
+
+  const fetchComplaints = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getComplaints();
-      setComplaints(data);
+      const result = await getComplaints({
+        page: currentPage,
+        limit: pageSize,
+        search: debouncedSearch.trim() || undefined,
+      });
+      setComplaints(result.data);
+      setTotalItems(result.total);
     } catch (error) {
       toast('Failed to fetch complaints', 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, pageSize, debouncedSearch]);
 
   useEffect(() => {
     fetchComplaints();
-  }, []);
+  }, [fetchComplaints]);
 
   const handleResolveToggle = async (complaint: Complaint) => {
     const newStatus = complaint.status === 'pending' ? 'resolved' : 'pending';
@@ -82,6 +107,26 @@ const ComplaintsPage: React.FC = () => {
         <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#e8f5f0' }}>Complaints</h1>
       </div>
 
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+        <div style={{ position: 'relative', width: '260px' }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="15" height="15"
+            style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#4a6b5e' }}>
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search complaints…"
+            style={{
+              padding: '9px 14px 9px 36px',
+              background: '#0a1a15', border: '1px solid #1e3d30',
+              borderRadius: '10px', color: '#e8f5f0', fontSize: '13px', width: '100%',
+              boxSizing: 'border-box'
+            }}
+          />
+        </div>
+      </div>
+
       <div style={{ background: '#0a1a15', borderRadius: '12px', padding: '20px', border: '1px solid #1e3d30' }}>
         {loading ? (
           <div style={{ color: '#878787', padding: '40px', textAlign: 'center' }}>Loading complaints...</div>
@@ -101,6 +146,13 @@ const ComplaintsPage: React.FC = () => {
               </div>
             )}
             emptyText="No complaints found."
+            pagination={{
+              currentPage,
+              totalItems,
+              pageSize,
+              onPageChange: setCurrentPage,
+              onPageSizeChange: setPageSize,
+            }}
           />
         )}
       </div>

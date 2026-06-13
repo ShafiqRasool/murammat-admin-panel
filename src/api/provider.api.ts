@@ -6,7 +6,7 @@ export interface Provider {
   company_name: string | null;
   phone: string | null;
   email: string | null;
-  approval_status: 'approved' | 'rejected' | 'unapproved';
+  approval_status: 'approved' | 'rejected' | 'unapproved' | 'pending';
   is_online: boolean;
   created_at: string;
   first_name: string | null;
@@ -18,11 +18,42 @@ export interface Provider {
   city_ids: string[];
 }
 
-export type ApprovalStatus = 'approved' | 'rejected' | 'unapproved';
+export type ApprovalStatus = 'approved' | 'rejected' | 'unapproved' | 'pending';
+
+export interface ProviderFilters {
+  status?: ApprovalStatus;
+  page?: number;
+  limit?: number;
+  search?: string;
+  is_online?: boolean;
+  provider_id?: string;
+}
+
+export interface PaginatedProviders {
+  data: Provider[];
+  total: number;
+}
 
 // ─── Providers ─────────────────────────────────────────────────────────
-export const getProviders = (status?: ApprovalStatus) =>
-  api.get<Provider[]>('/admin/providers', { params: status ? { status } : {} }).then(r => r.data);
+export const getProviders = (filters: ProviderFilters = {}) =>
+  api.get<PaginatedProviders>('/admin/providers', { params: filters }).then(r => r.data);
 
 export const approveProvider = (providerId: string, status: ApprovalStatus) =>
   api.patch(`/admin/providers/${providerId}/approve`, { status }).then(r => r.data);
+
+export interface CreateProviderPayload {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone: string;
+  company_name: string;
+  password?: string;
+  service_ids?: string[];
+  area_ids?: string[];
+}
+
+export const createProvider = (payload: CreateProviderPayload) =>
+  api.post<Provider>('/admin/providers', payload).then(r => r.data);
+
+export const updateProvider = (providerId: string, payload: CreateProviderPayload) =>
+  api.put<Provider>(`/admin/providers/${providerId}`, payload).then(r => r.data);

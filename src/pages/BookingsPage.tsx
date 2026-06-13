@@ -1,23 +1,27 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { getAdminBookings, assignBooking, cancelBooking, createAdminBooking, type Booking } from '../api/booking.api';
+import { getAdminBookings, assignBooking, cancelBooking, createAdminBooking, getAutoAssignSetting, updateAutoAssignSetting, reopenBooking, type Booking } from '../api/booking.api';
 import { getCategories, type ServiceCategory } from '../api/service.api';
 import { getServices, type Service } from '../api/service.api';
 import { getProviders, type Provider } from '../api/provider.api';
 import { getCustomers, type Customer } from '../api/customer.api';
-import { getCities, type City } from '../api/location.api';
+import { getCities, getAreas, type City, type Area } from '../api/location.api';
 import Badge, { statusVariant } from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { toast } from '../components/ui/Toast';
+import { PhoneInput } from '../components/ui/PhoneInput';
+import { MapPicker } from '../components/ui/MapPicker';
+import Pagination from '../components/ui/Pagination';
 
 const STATUS_TABS = [
-  { key: 'all',         label: 'All Orders' },
-  { key: 'pending',     label: 'Pending',     color: '#d97706' },
-  { key: 'assigned',    label: 'Assigned',    color: '#00674F' },
-  { key: 'in_progress', label: 'In Progress', color: '#0891b2' },
-  { key: 'completed',   label: 'Completed',   color: '#16a34a' },
-  { key: 'cancelled',   label: 'Cancelled',   color: '#dc2626' },
+  { key: 'all',                 label: 'All Orders' },
+  { key: 'BookingDone',         label: 'Booking Done',        color: '#d97706' },
+  { key: 'Technician Assigned', label: 'Technician Assigned', color: '#00674F' },
+  { key: 'Work Started',        label: 'Work Started',        color: '#0891b2' },
+  { key: 'Work Done',           label: 'Work Done',           color: '#f59e0b' },
+  { key: 'Rated & Reviewed',    label: 'Rated & Reviewed',    color: '#16a34a' },
+  { key: 'cancelled',           label: 'Cancelled',           color: '#dc2626' },
 ];
 
 const BookingsPage: React.FC = () => {
@@ -30,8 +34,27 @@ const BookingsPage: React.FC = () => {
   // Filters
   const [statusTab, setStatusTab] = useState('all');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [categoryId, setCategoryId] = useState('all');
   const [dateSort, setDateSort] = useState<'desc' | 'asc'>('desc');
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusTab, debouncedSearch, categoryId, dateSort]);
   
   // Reference data
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
@@ -40,6 +63,7 @@ const BookingsPage: React.FC = () => {
   // Modals
   const [viewModal, setViewModal] = useState<Booking | null>(null);
   const [assignModal, setAssignModal] = useState<Booking | null>(null);
+  const [providerProfileModal, setProviderProfileModal] = useState<Provider | null>(null);
   const [selectedProvider, setSelectedProvider] = useState('');
   const [assignLoading, setAssignLoading] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
@@ -49,6 +73,8 @@ const BookingsPage: React.FC = () => {
   const [providerCategoryFilter, setProviderCategoryFilter] = useState<string>('all');
   const [providerCityFilter, setProviderCityFilter] = useState<string>('all');
   const [cities, setCities] = useState<City[]>([]);
+  const [globalAutoAssign, setGlobalAutoAssign] = useState(false);
+  const [globalAutoAssignRadius, setGlobalAutoAssignRadius] = useState<number>(5);
 
   const [createModal, setCreateModal] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
@@ -60,8 +86,11 @@ const BookingsPage: React.FC = () => {
     service_id: '',
     quantity: 1,
     scheduled_time: '',
-    scheduled_time: '',
-    problem_message: ''
+    problem_message: '',
+    is_auto_assign: true,
+    auto_assign_radius: 5,
+    latitude: 31.5204,
+    longitude: 74.3587
   });
   const [isManualCustomer, setIsManualCustomer] = useState(false);
   const [manualCustomer, setManualCustomer] = useState({
@@ -73,12 +102,29 @@ const BookingsPage: React.FC = () => {
     area_id: '',
   });
 
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+
+  // ── Load areas when city changes ──
+  useEffect(() => {
+    if (manualCustomer.city_id) {
+      getAreas(manualCustomer.city_id).then(setAreas).catch(() => {});
+    } else {
+      setAreas([]);
+    }
+  }, [manualCustomer.city_id]);
+
   // ── Preload Reference Data ──
   useEffect(() => {
     getCategories().then(setCategories).catch(() => {});
-    getProviders('approved').then(setProviders).catch(() => {});
-    getCustomers().then(setCustomersList).catch(() => {});
+    getProviders({ status: 'approved' }).then((res: any) => setProviders(Array.isArray(res) ? res : res.data || [])).catch(() => {});
+    getCustomers().then((res: any) => setCustomersList(Array.isArray(res) ? res : res.data)).catch(() => {});
     getCities().then(setCities).catch(() => {});
+    getAutoAssignSetting().then(data => {
+      setGlobalAutoAssign(data.auto_assign);
+      if (data.radius !== undefined) setGlobalAutoAssignRadius(data.radius);
+    }).catch(() => {});
   }, []);
 
   // ── Handle Navigation State (from Call Requests) ──
@@ -117,7 +163,9 @@ const BookingsPage: React.FC = () => {
 
   useEffect(() => {
     if (createForm.category_id) {
-      getServices(createForm.category_id).then(setServicesList).catch(() => {});
+      getServices({ category_id: createForm.category_id })
+        .then((res: any) => setServicesList(Array.isArray(res) ? res : res.data))
+        .catch(() => {});
     } else {
       setServicesList([]);
     }
@@ -127,36 +175,36 @@ const BookingsPage: React.FC = () => {
   const loadBookings = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getAdminBookings({
+      const result = await getAdminBookings({
         status: statusTab === 'all' ? undefined : statusTab,
-        search: search.trim() || undefined,
+        search: debouncedSearch.trim() || undefined,
         category_id: categoryId === 'all' ? undefined : categoryId,
-        dateSort
+        dateSort,
+        page: currentPage,
+        limit: pageSize,
       });
-      setBookings(data);
+      setBookings(result.data);
+      setTotalItems(result.total);
     } catch {
       toast('Failed to load bookings', 'error');
     } finally {
       setLoading(false);
     }
-  }, [statusTab, search, categoryId, dateSort]);
+  }, [statusTab, debouncedSearch, categoryId, dateSort, currentPage, pageSize]);
 
-  // Debounced search trigger
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      loadBookings();
-    }, 400);
-    return () => clearTimeout(timeout);
+    loadBookings();
   }, [loadBookings]);
 
   // ── Assign Logic ──
-  const handleAssign = async () => {
-    if (!assignModal || !selectedProvider) return toast('Please select a provider', 'warning');
+  const handleAssign = async (targetBooking: Booking | null) => {
+    if (!targetBooking || !selectedProvider) return toast('Please select a provider', 'warning');
     setAssignLoading(true);
     try {
-      await assignBooking(assignModal.id, selectedProvider);
+      await assignBooking(targetBooking.id, selectedProvider);
       toast('Booking assigned successfully', 'success');
       setAssignModal(null);
+      setViewModal(null);
       setSelectedProvider('');
       loadBookings();
     } catch (e: any) {
@@ -186,6 +234,18 @@ const BookingsPage: React.FC = () => {
     });
   }, [providers, providerOnlineFilter, providerCategoryFilter, providerCityFilter]);
 
+  const filteredCustomers = React.useMemo(() => {
+    if (!customerSearch.trim()) return customersList;
+    const q = customerSearch.toLowerCase();
+    return customersList.filter(c => 
+      (c.display_name && c.display_name.toLowerCase().includes(q)) || 
+      (c.email && c.email.toLowerCase().includes(q)) || 
+      (c.phone && c.phone.includes(q)) ||
+      (c.first_name && c.first_name.toLowerCase().includes(q)) ||
+      (c.last_name && c.last_name.toLowerCase().includes(q))
+    );
+  }, [customersList, customerSearch]);
+
   // ── Cancel Logic ──
   const handleCancelBooking = async (booking: Booking) => {
     if (!window.confirm(`Cancel Order #${booking.id.split('-')[0].toUpperCase()}? This cannot be undone.`)) return;
@@ -199,6 +259,22 @@ const BookingsPage: React.FC = () => {
       toast(e?.response?.data?.error || 'Failed to cancel booking', 'error');
     } finally {
       setCancelLoading(false);
+    }
+  };
+  // ── Reopen Logic ──
+  const [reopenLoading, setReopenLoading] = useState(false);
+  const handleReopenBooking = async (booking: Booking) => {
+    if (!window.confirm('Are you sure you want to reopen this complained booking? Status will reset to Work Started.')) return;
+    setReopenLoading(true);
+    try {
+      await reopenBooking(booking.id);
+      toast('Booking reopened to Work Started successfully!', 'success');
+      setViewModal(null);
+      loadBookings();
+    } catch (err: any) {
+      toast(err.response?.data?.error || 'Failed to reopen booking', 'error');
+    } finally {
+      setReopenLoading(false);
     }
   };
 
@@ -226,13 +302,19 @@ const BookingsPage: React.FC = () => {
         service_id: createForm.service_id,
         quantity: createForm.quantity,
         scheduled_time: new Date(createForm.scheduled_time).toISOString(),
-        problem_message: createForm.problem_message
+        problem_message: createForm.problem_message,
+        is_auto_assign: true,
+        auto_assign_radius: createForm.auto_assign_radius,
+        latitude: createForm.latitude,
+        longitude: createForm.longitude
       });
       toast('Booking created successfully', 'success');
       setCreateModal(false);
       setCreateForm({
         customer_id: '', category_id: '', service_id: '',
-        quantity: 1, scheduled_time: '', problem_message: ''
+        quantity: 1, scheduled_time: '', problem_message: '',
+        is_auto_assign: true, auto_assign_radius: 5,
+        latitude: 31.5204, longitude: 74.3587
       });
       setManualCustomer({
         first_name: '', last_name: '', phone: '', address_line1: '', city_id: '', area_id: ''
@@ -257,22 +339,97 @@ const BookingsPage: React.FC = () => {
             <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#e8f5f0' }}>Bookings</h2>
             <p style={{ margin: '4px 0 0', color: '#878787', fontSize: '13px' }}>Manage customer orders and assignments</p>
           </div>
-          <button
-            onClick={() => setCreateModal(true)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              padding: '10px 20px', borderRadius: '10px', border: 'none',
-              background: 'linear-gradient(135deg, #00674F, #00a87a)',
-              color: '#fff', fontWeight: 700, fontSize: '13px',
-              cursor: 'pointer', transition: 'opacity 0.15s',
-              boxShadow: '0 4px 12px #00674F40',
-            }}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} width="14" height="14">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            Create Order
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+            <div 
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '16px', 
+                background: '#0a1a15', 
+                border: '1px solid #1e3d30', 
+                padding: '8px 16px', 
+                borderRadius: '10px' 
+              }}
+            >
+              <label 
+                style={{ 
+                  fontSize: '13px', 
+                  fontWeight: 600, 
+                  color: globalAutoAssign ? '#10b981' : '#878787', 
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <input 
+                  type="checkbox" 
+                  checked={globalAutoAssign}
+                  onChange={async (e) => {
+                    const checked = e.target.checked;
+                    try {
+                      await updateAutoAssignSetting(checked, globalAutoAssignRadius);
+                      setGlobalAutoAssign(checked);
+                      toast(`Global Auto Assignment ${checked ? 'Enabled' : 'Disabled'}`, 'success');
+                    } catch {
+                      toast('Failed to update setting', 'error');
+                    }
+                  }}
+                  style={{ width: '15px', height: '15px', cursor: 'pointer' }}
+                />
+                Auto Assign New Customer Bookings
+              </label>
+
+              {globalAutoAssign && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderLeft: '1px solid #1e3d30', paddingLeft: '12px' }}>
+                  <span style={{ fontSize: '11px', color: '#878787', fontWeight: 600, textTransform: 'uppercase' }}>Radius (km):</span>
+                  <input 
+                    type="number" 
+                    min="1"
+                    max="100"
+                    value={globalAutoAssignRadius}
+                    onChange={async (e) => {
+                      const val = parseFloat(e.target.value) || 5;
+                      setGlobalAutoAssignRadius(val);
+                      try {
+                        await updateAutoAssignSetting(globalAutoAssign, val);
+                      } catch {
+                        // silent fallback
+                      }
+                    }}
+                    style={{ 
+                      width: '50px', 
+                      padding: '4px 6px', 
+                      background: '#122b22', 
+                      border: '1px solid #1e3d30', 
+                      borderRadius: '6px', 
+                      color: '#fff', 
+                      fontSize: '12px',
+                      textAlign: 'center',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => setCreateModal(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '10px 20px', borderRadius: '10px', border: 'none',
+                background: 'linear-gradient(135deg, #00674F, #00a87a)',
+                color: '#fff', fontWeight: 700, fontSize: '13px',
+                cursor: 'pointer', transition: 'opacity 0.15s',
+                boxShadow: '0 4px 12px #00674F40',
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} width="14" height="14">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Create Order
+            </button>
+          </div>
         </div>
 
         {/* Top Row: Search & Filters */}
@@ -344,9 +501,10 @@ const BookingsPage: React.FC = () => {
       <div style={{ background: '#122b22', border: '1px solid #1e3d30', borderRadius: '12px', overflow: 'hidden' }}>
         <div style={{ display: 'flex', padding: '14px 16px', borderBottom: '1px solid #1e3d30', background: '#0d241c' }}>
           {[
-            { label: 'Booking Info', flex: 1.5 },
-            { label: 'Customer', flex: 1.2 },
-            { label: 'Provider', flex: 1.2 },
+            { label: 'Booking Info', flex: 1.2 },
+            { label: 'Customer', flex: 1.0 },
+            { label: 'Service', flex: 1.2 },
+            { label: 'Provider', flex: 1.0 },
             { label: 'Amount', flex: 0.8 },
             { label: 'Status', flex: 0.8 },
             { label: 'Actions', flex: 0.8, align: 'right' },
@@ -372,10 +530,13 @@ const BookingsPage: React.FC = () => {
               }}
               onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#183828'}
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-              onClick={() => setViewModal(b)}
+              onClick={() => {
+                setSelectedProvider('');
+                setViewModal(b);
+              }}
             >
               {/* Booking Info */}
-              <div style={{ flex: 1.5, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <span style={{ fontSize: '14px', color: '#e8f5f0', fontWeight: 600 }}>
                   Order #{b.id.split('-')[0].toUpperCase()}
                 </span>
@@ -385,14 +546,36 @@ const BookingsPage: React.FC = () => {
               </div>
               
               {/* Customer */}
-              <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', gap: '4px', overflow: 'hidden' }}>
-                <span style={{ fontSize: '13px', color: '#e8f5f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {b.customer_email || b.customer_phone}
+              <div style={{ flex: 1.0, display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
+                <span style={{ fontSize: '13px', color: '#e8f5f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>
+                  {b.customer_name || 'No Name'}
+                </span>
+                <span style={{ fontSize: '11px', color: '#878787', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {b.customer_phone}
+                </span>
+              </div>
+
+              {/* Service */}
+              <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
+                <span 
+                  style={{ 
+                    fontSize: '13px', 
+                    color: '#e8f5f0', 
+                    overflow: 'hidden', 
+                    textOverflow: 'ellipsis', 
+                    whiteSpace: 'nowrap', 
+                    fontWeight: 500 
+                  }}
+                  title={b.items?.map(item => `${item.quantity}x ${item.service_name}`).join(', ') || 'No Service'}
+                >
+                  {b.items && b.items.length > 0
+                    ? b.items.map(item => `${item.quantity}x ${item.service_name}`).join(', ')
+                    : 'No Service'}
                 </span>
               </div>
 
               {/* Provider */}
-              <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', gap: '4px', overflow: 'hidden' }}>
+              <div style={{ flex: 1.0, display: 'flex', flexDirection: 'column', gap: '4px', overflow: 'hidden' }}>
                 <span style={{ fontSize: '13px', color: b.provider_id ? '#e8f5f0' : '#878787', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {b.provider_name || 'Unassigned'}
                 </span>
@@ -410,12 +593,12 @@ const BookingsPage: React.FC = () => {
 
               {/* Actions */}
               <div style={{ flex: 0.8, display: 'flex', justifyContent: 'flex-end' }} onClick={e => e.stopPropagation()}>
-                {b.status === 'pending' ? (
-                  <Button variant="primary" size="sm" onClick={() => setAssignModal(b)}>
+                {b.status === 'BookingDone' ? (
+                  <Button variant="primary" size="sm" onClick={() => { setSelectedProvider(''); setAssignModal(b); }}>
                     Assign
                   </Button>
                 ) : (
-                  <Button variant="secondary" size="sm" onClick={() => setViewModal(b)}>
+                  <Button variant="secondary" size="sm" onClick={() => { setSelectedProvider(''); setViewModal(b); }}>
                     View
                   </Button>
                 )}
@@ -423,27 +606,55 @@ const BookingsPage: React.FC = () => {
             </div>
           ))
         )}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+        />
       </div>
 
       {/* ── View Modal ── */}
       {viewModal && (
         <Modal
           isOpen={!!viewModal}
-          onClose={() => setViewModal(null)}
+          onClose={() => { setViewModal(null); setSelectedProvider(''); }}
           title={`Order Details #${viewModal.id.split('-')[0].toUpperCase()}`}
           width="560px"
           footer={
             <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-              <Button variant="ghost" onClick={() => setViewModal(null)}>Close</Button>
-              {!['cancelled', 'completed'].includes(viewModal.status) && (
-                <Button
-                  variant="danger"
-                  loading={cancelLoading}
-                  onClick={() => handleCancelBooking(viewModal)}
-                >
-                  ✕ Cancel Order
-                </Button>
-              )}
+              <Button variant="ghost" onClick={() => { setViewModal(null); setSelectedProvider(''); }}>Close</Button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {viewModal.has_complaint && (
+                  <Button
+                    variant="primary"
+                    loading={reopenLoading}
+                    onClick={() => handleReopenBooking(viewModal)}
+                  >
+                    Reopen Order
+                  </Button>
+                )}
+                {viewModal.status === 'BookingDone' && (
+                  <Button
+                    variant="primary"
+                    loading={assignLoading}
+                    disabled={!selectedProvider}
+                    onClick={() => handleAssign(viewModal)}
+                  >
+                    Confirm Assignment
+                  </Button>
+                )}
+                {!['cancelled', 'Rated & Reviewed'].includes(viewModal.status) && (
+                  <Button
+                    variant="danger"
+                    loading={cancelLoading}
+                    onClick={() => handleCancelBooking(viewModal)}
+                  >
+                    ✕ Cancel Order
+                  </Button>
+                )}
+              </div>
             </div>
           }
         >
@@ -454,14 +665,50 @@ const BookingsPage: React.FC = () => {
                 <Badge variant={statusVariant(viewModal.status)}>{viewModal.status.replace('_', ' ')}</Badge>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span style={{ color: '#878787', fontSize: '13px' }}>Customer</span>
-                <span style={{ color: '#e8f5f0', fontSize: '13px' }}>{viewModal.customer_email || viewModal.customer_phone}</span>
+                <span style={{ color: '#878787', fontSize: '13px' }}>Customer Name</span>
+                <span style={{ color: '#e8f5f0', fontSize: '13px' }}>{viewModal.customer_name || '—'}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ color: '#878787', fontSize: '13px' }}>Customer Phone</span>
+                <span style={{ color: '#e8f5f0', fontSize: '13px' }}>{viewModal.customer_phone || '—'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: '#878787', fontSize: '13px' }}>Assigned Provider</span>
-                <span style={{ color: '#e8f5f0', fontSize: '13px' }}>{viewModal.provider_name || '—'}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ color: '#e8f5f0', fontSize: '13px' }}>{viewModal.provider_name || '—'}</span>
+                  {viewModal.provider_id && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      style={{ padding: '4px 8px', fontSize: '11px', height: '24px', borderRadius: '6px' }}
+                      onClick={() => {
+                        const prov = providers.find(p => p.provider_id === viewModal.provider_id);
+                        if (prov) {
+                          setProviderProfileModal(prov);
+                        } else {
+                          getProviders({ search: viewModal.provider_name || undefined }).then(res => {
+                            const list = Array.isArray(res) ? res : res.data || [];
+                            const exactProv = list.find((p: any) => p.provider_id === viewModal.provider_id);
+                            if (exactProv) setProviderProfileModal(exactProv);
+                            else toast('Provider details not found', 'error');
+                          }).catch(() => toast('Failed to load provider profile', 'error'));
+                        }
+                      }}
+                    >
+                      View Profile
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
+
+            {viewModal.has_complaint && (
+              <div style={{ background: '#3b0f16', padding: '16px', borderRadius: '12px', border: '1px solid #dc262640', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <span style={{ color: '#f87171', fontSize: '13px', fontWeight: 'bold' }}>⚠️ Customer Complaint Registered</span>
+                <p style={{ color: '#fca5a5', fontSize: '13px', margin: 0, lineHeight: 1.4 }}>{viewModal.complaint_message || 'No complaint message provided.'}</p>
+              </div>
+            )}
 
             <h4 style={{ color: '#e8f5f0', fontSize: '14px', margin: '8px 0 0' }}>Ordered Items</h4>
             <div style={{ border: '1px solid #1e3d30', borderRadius: '8px', overflow: 'hidden' }}>
@@ -480,6 +727,93 @@ const BookingsPage: React.FC = () => {
               <span style={{ color: '#e8f5f0', fontSize: '15px', fontWeight: 700 }}>Total</span>
               <span style={{ color: '#00674F', fontSize: '16px', fontWeight: 800 }}>PKR {viewModal.total_amount.toLocaleString()}</span>
             </div>
+
+            {/* Assignment Section inside Details Modal for Pending Orders */}
+            {viewModal.status === 'BookingDone' && (
+              <div style={{ marginTop: '20px', borderTop: '1px solid #1e3d30', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <h4 style={{ color: '#e8f5f0', fontSize: '14px', margin: '0', fontWeight: 700 }}>Assign Provider</h4>
+                
+                {/* Filters */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#878787', marginBottom: '6px', textTransform: 'uppercase' }}>Availability</label>
+                    <div style={{ display: 'flex', background: '#0a1a15', borderRadius: '8px', border: '1px solid #1e3d30', overflow: 'hidden' }}>
+                      {['all', 'online', 'offline'].map(status => (
+                        <button
+                          key={status} type="button" onClick={() => setProviderOnlineFilter(status as any)}
+                          style={{
+                            flex: 1, padding: '8px', border: 'none',
+                            background: providerOnlineFilter === status ? '#1e3d30' : 'transparent',
+                            color: providerOnlineFilter === status ? '#e8f5f0' : '#878787',
+                            fontSize: '12px', fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize'
+                          }}
+                        >
+                          {status}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#878787', marginBottom: '6px', textTransform: 'uppercase' }}>Service Category</label>
+                    <select
+                      value={providerCategoryFilter} onChange={e => setProviderCategoryFilter(e.target.value)}
+                      style={{ width: '100%', padding: '9px 12px', background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '8px', color: '#e8f5f0', fontSize: '13px', outline: 'none' }}
+                    >
+                      <option value="all">All Categories</option>
+                      {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#878787', marginBottom: '6px', textTransform: 'uppercase' }}>City / Location</label>
+                    <select
+                      value={providerCityFilter} onChange={e => setProviderCityFilter(e.target.value)}
+                      style={{ width: '100%', padding: '9px 12px', background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '8px', color: '#e8f5f0', fontSize: '13px', outline: 'none' }}
+                    >
+                      <option value="all">All Cities</option>
+                      {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Provider Select */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#878787', marginBottom: '8px', textTransform: 'uppercase' }}>
+                    Select Approved Provider ({filteredProviders.length} available)
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <div style={{ flex: 1, background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '10px', overflow: 'hidden' }}>
+                      <select
+                        value={selectedProvider} onChange={e => setSelectedProvider(e.target.value)}
+                        style={{ width: '100%', padding: '12px 14px', background: 'transparent', border: 'none', color: selectedProvider ? '#e8f5f0' : '#4a6b5e', fontSize: '14px', outline: 'none', cursor: 'pointer' }}
+                      >
+                        <option value="">Choose a provider...</option>
+                        {filteredProviders.map(p => (
+                          <option key={p.provider_id} value={p.provider_id}>
+                            {p.is_online ? '🟢 ' : '⚫ '}
+                            {p.first_name || p.company_name} - {p.phone || 'No Phone'}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {selectedProvider && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        style={{ padding: '12px 16px', height: '46px', display: 'flex', alignItems: 'center', borderRadius: '10px' }}
+                        onClick={() => {
+                          const prov = providers.find(p => p.provider_id === selectedProvider);
+                          if (prov) setProviderProfileModal(prov);
+                        }}
+                      >
+                        View Profile
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </Modal>
       )}
@@ -492,7 +826,7 @@ const BookingsPage: React.FC = () => {
           footer={
             <>
               <Button variant="ghost" onClick={() => { setAssignModal(null); setSelectedProvider(''); }}>Cancel</Button>
-              <Button variant="primary" loading={assignLoading} onClick={handleAssign}>Confirm Assignment</Button>
+              <Button variant="primary" loading={assignLoading} disabled={!selectedProvider} onClick={() => handleAssign(assignModal)}>Confirm Assignment</Button>
             </>
           }
         >
@@ -547,19 +881,119 @@ const BookingsPage: React.FC = () => {
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#878787', marginBottom: '8px', textTransform: 'uppercase' }}>
                 Select Approved Provider ({filteredProviders.length} available)
               </label>
-              <div style={{ background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '10px', overflow: 'hidden' }}>
-                <select
-                  value={selectedProvider} onChange={e => setSelectedProvider(e.target.value)}
-                  style={{ width: '100%', padding: '12px 14px', background: 'transparent', border: 'none', color: selectedProvider ? '#e8f5f0' : '#4a6b5e', fontSize: '14px', outline: 'none', cursor: 'pointer' }}
-                >
-                  <option value="">Choose a provider...</option>
-                  {filteredProviders.map(p => (
-                    <option key={p.provider_id} value={p.provider_id}>
-                      {p.is_online ? '🟢 ' : '⚫ '}
-                      {p.first_name || p.company_name} ({p.user_email || p.email})
-                    </option>
-                  ))}
-                </select>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div style={{ flex: 1, background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '10px', overflow: 'hidden' }}>
+                  <select
+                    value={selectedProvider} onChange={e => setSelectedProvider(e.target.value)}
+                    style={{ width: '100%', padding: '12px 14px', background: 'transparent', border: 'none', color: selectedProvider ? '#e8f5f0' : '#4a6b5e', fontSize: '14px', outline: 'none', cursor: 'pointer' }}
+                  >
+                    <option value="">Choose a provider...</option>
+                    {filteredProviders.map(p => (
+                      <option key={p.provider_id} value={p.provider_id}>
+                        {p.is_online ? '🟢 ' : '⚫ '}
+                        {p.first_name || p.company_name} - {p.phone || 'No Phone'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {selectedProvider && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    style={{ padding: '12px 16px', height: '46px', display: 'flex', alignItems: 'center', borderRadius: '10px' }}
+                    onClick={() => {
+                      const prov = providers.find(p => p.provider_id === selectedProvider);
+                      if (prov) setProviderProfileModal(prov);
+                    }}
+                  >
+                    View Profile
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Provider Profile Details Modal ── */}
+      {providerProfileModal && (
+        <Modal
+          isOpen={!!providerProfileModal}
+          onClose={() => setProviderProfileModal(null)}
+          title="Provider Profile Details"
+          width="500px"
+          footer={
+            <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
+              <Button variant="ghost" onClick={() => setProviderProfileModal(null)}>Close</Button>
+            </div>
+          }
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Avatar & Basic Info */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: '#0a1a15', padding: '16px', borderRadius: '12px', border: '1px solid #1e3d30' }}>
+              <div style={{
+                width: '50px',
+                height: '50px',
+                borderRadius: '50%',
+                background: '#00674F25',
+                color: '#00674F',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '18px',
+                fontWeight: 700,
+              }}>
+                {(providerProfileModal.first_name?.[0] ?? providerProfileModal.company_name?.[0] ?? '?').toUpperCase()}
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', color: '#e8f5f0', fontWeight: 700 }}>
+                  {[providerProfileModal.first_name, providerProfileModal.last_name].filter(Boolean).join(' ') || 'Unnamed'}
+                </h3>
+                <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#878787' }}>
+                  {providerProfileModal.company_name || 'Individual Provider'}
+                </p>
+              </div>
+            </div>
+
+            {/* Profile Grid */}
+            <div style={{ background: '#0a1a15', padding: '16px', borderRadius: '12px', border: '1px solid #1e3d30', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #1e3d3040', paddingBottom: '8px' }}>
+                <span style={{ fontSize: '13px', color: '#878787' }}>Availability</span>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '5px',
+                  fontSize: '12px', fontWeight: 700,
+                  color: providerProfileModal.is_online ? '#00c896' : '#4a6b5e',
+                }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: providerProfileModal.is_online ? '#00c896' : '#4a6b5e', display: 'inline-block' }} />
+                  {providerProfileModal.is_online ? 'Online' : 'Offline'}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #1e3d3040', paddingBottom: '8px' }}>
+                <span style={{ fontSize: '13px', color: '#878787' }}>Phone Number</span>
+                <span style={{ fontSize: '13px', color: '#e8f5f0' }}>{providerProfileModal.phone || '—'}</span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #1e3d3040', paddingBottom: '8px' }}>
+                <span style={{ fontSize: '13px', color: '#878787' }}>Email Address</span>
+                <span style={{ fontSize: '13px', color: '#e8f5f0' }}>{providerProfileModal.user_email || providerProfileModal.email || '—'}</span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #1e3d3040', paddingBottom: '8px' }}>
+                <span style={{ fontSize: '13px', color: '#878787' }}>Registered Since</span>
+                <span style={{ fontSize: '13px', color: '#e8f5f0' }}>{new Date(providerProfileModal.created_at).toLocaleDateString(undefined, { dateStyle: 'medium' })}</span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #1e3d3040', paddingBottom: '8px' }}>
+                <span style={{ fontSize: '13px', color: '#878787' }}>Approval Status</span>
+                <Badge variant={statusVariant(providerProfileModal.approval_status)}>{providerProfileModal.approval_status}</Badge>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', flexDirection: 'column', gap: '4px' }}>
+                <span style={{ fontSize: '13px', color: '#878787' }}>Skills / Categories</span>
+                <span style={{ fontSize: '13px', color: '#e8f5f0', lineHeight: 1.4 }}>
+                  {providerProfileModal.category_ids?.map(id => categories.find(c => c.id === id)?.name).filter(Boolean).join(', ') || 'None'}
+                </span>
               </div>
             </div>
           </div>
@@ -569,7 +1003,13 @@ const BookingsPage: React.FC = () => {
       {/* ── Create Booking Modal ── */}
       {createModal && (
         <Modal
-          isOpen={createModal} onClose={() => { setCreateModal(false); setCreateForm({ customer_id: '', category_id: '', service_id: '', quantity: 1, scheduled_time: '', problem_message: '' }); }}
+          isOpen={createModal} 
+          onClose={() => { 
+            setCreateModal(false); 
+            setCreateForm({ customer_id: '', category_id: '', service_id: '', quantity: 1, scheduled_time: '', problem_message: '', is_auto_assign: true, auto_assign_radius: 5, latitude: 31.5204, longitude: 74.3587 }); 
+            setCustomerSearch('');
+            setShowCustomerDropdown(false);
+          }}
           title="Create Manual Order" subtitle="Create a new order for a customer" width="600px"
           footer={
             <>
@@ -591,14 +1031,121 @@ const BookingsPage: React.FC = () => {
                 </div>
                 
                 {!isManualCustomer ? (
-                  <select
-                    required
-                    value={createForm.customer_id} onChange={e => setCreateForm(p => ({ ...p, customer_id: e.target.value }))}
-                    style={{ width: '100%', padding: '12px 14px', background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '10px', color: createForm.customer_id ? '#e8f5f0' : '#4a6b5e', fontSize: '14px', outline: 'none' }}
-                  >
-                    <option value="">Choose a customer...</option>
-                    {customersList.map(c => <option key={c.id} value={c.id}>{c.display_name || c.email || c.phone} ({c.phone || c.email})</option>)}
-                  </select>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="text"
+                      placeholder="Search customer by name, phone or email..."
+                      value={customerSearch}
+                      onFocus={() => setShowCustomerDropdown(true)}
+                      onChange={e => {
+                        setCustomerSearch(e.target.value);
+                        setShowCustomerDropdown(true);
+                        if (!e.target.value) {
+                          setCreateForm(p => ({ ...p, customer_id: '' }));
+                        }
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '12px 14px',
+                        background: '#0a1a15',
+                        border: '1px solid #1e3d30',
+                        borderRadius: '10px',
+                        color: '#e8f5f0',
+                        fontSize: '14px',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    
+                    {createForm.customer_id && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCreateForm(p => ({ ...p, customer_id: '' }));
+                          setCustomerSearch('');
+                          setShowCustomerDropdown(false);
+                        }}
+                        style={{
+                          position: 'absolute',
+                          right: '12px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          fontWeight: 600
+                        }}
+                      >
+                        Clear
+                      </button>
+                    )}
+
+                    {showCustomerDropdown && (
+                      <>
+                        <div 
+                          onClick={() => setShowCustomerDropdown(false)}
+                          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 998 }} 
+                        />
+                        
+                        <div style={{
+                          position: 'absolute',
+                          top: '100%',
+                          left: 0,
+                          right: 0,
+                          marginTop: '6px',
+                          background: '#0d241c',
+                          border: '1px solid #1e3d30',
+                          borderRadius: '10px',
+                          maxHeight: '200px',
+                          overflowY: 'auto',
+                          zIndex: 999,
+                          boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
+                        }}>
+                          {filteredCustomers.length === 0 ? (
+                            <div style={{ padding: '12px', color: '#878787', fontSize: '13px', textAlign: 'center' }}>
+                              No customers found
+                            </div>
+                          ) : (
+                            filteredCustomers.map(c => {
+                              const isSelected = createForm.customer_id === c.id;
+                              return (
+                                <div
+                                  key={c.id}
+                                  onClick={() => {
+                                    setCreateForm(p => ({ ...p, customer_id: c.id }));
+                                    setCustomerSearch(`${c.display_name || 'No Name'} (${c.phone || c.email})`);
+                                    setShowCustomerDropdown(false);
+                                  }}
+                                  style={{
+                                    padding: '10px 14px',
+                                    color: '#e8f5f0',
+                                    fontSize: '13px',
+                                    cursor: 'pointer',
+                                    background: isSelected ? '#00674F' : 'transparent',
+                                    borderBottom: '1px solid #1e3d3040',
+                                    textAlign: 'left'
+                                  }}
+                                  onMouseEnter={e => {
+                                    if (!isSelected) e.currentTarget.style.background = '#122b22';
+                                  }}
+                                  onMouseLeave={e => {
+                                    if (!isSelected) e.currentTarget.style.background = 'transparent';
+                                  }}
+                                >
+                                  <div style={{ fontWeight: 600 }}>{c.display_name || 'No Name'}</div>
+                                  <div style={{ fontSize: '11px', color: isSelected ? '#a7f3d0' : '#878787' }}>
+                                    Phone: {c.phone || '—'} | Email: {c.email || '—'}
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#0a1a15', padding: '16px', borderRadius: '10px', border: '1px solid #1e3d30' }}>
                      <div>
@@ -609,10 +1156,10 @@ const BookingsPage: React.FC = () => {
                        <label style={{ display: 'block', fontSize: '11px', color: '#878787', marginBottom: '4px' }}>Last Name</label>
                        <input type="text" value={manualCustomer.last_name} onChange={e => setManualCustomer(p => ({ ...p, last_name: e.target.value }))} style={{ width: '100%', padding: '8px 12px', background: '#122b22', border: '1px solid #1e3d30', borderRadius: '6px', color: '#fff', fontSize: '13px' }} />
                      </div>
-                     <div>
-                       <label style={{ display: 'block', fontSize: '11px', color: '#878787', marginBottom: '4px' }}>Phone *</label>
-                       <input required type="tel" value={manualCustomer.phone} onChange={e => setManualCustomer(p => ({ ...p, phone: e.target.value }))} style={{ width: '100%', padding: '8px 12px', background: '#122b22', border: '1px solid #1e3d30', borderRadius: '6px', color: '#fff', fontSize: '13px' }} />
-                     </div>
+                      <div style={{ gridColumn: 'span 2', marginBottom: '-16px' }}>
+                        <label style={{ display: 'block', fontSize: '11px', color: '#878787', marginBottom: '4px' }}>Phone *</label>
+                        <PhoneInput value={manualCustomer.phone} onChange={val => setManualCustomer(p => ({ ...p, phone: val }))} />
+                      </div>
                      <div>
                        <label style={{ display: 'block', fontSize: '11px', color: '#878787', marginBottom: '4px' }}>Address</label>
                        <input type="text" value={manualCustomer.address_line1} onChange={e => setManualCustomer(p => ({ ...p, address_line1: e.target.value }))} style={{ width: '100%', padding: '8px 12px', background: '#122b22', border: '1px solid #1e3d30', borderRadius: '6px', color: '#fff', fontSize: '13px' }} />
@@ -628,8 +1175,7 @@ const BookingsPage: React.FC = () => {
                        <label style={{ display: 'block', fontSize: '11px', color: '#878787', marginBottom: '4px' }}>Area *</label>
                        <select required value={manualCustomer.area_id} onChange={e => setManualCustomer(p => ({ ...p, area_id: e.target.value }))} disabled={!manualCustomer.city_id} style={{ width: '100%', padding: '8px 12px', background: '#122b22', border: '1px solid #1e3d30', borderRadius: '6px', color: '#fff', fontSize: '13px' }}>
                          <option value="">Select Area</option>
-                         {/* To avoid huge complexity, we map all areas. We should technically filter by city but this is minimal */}
-                         {cities.find(c => c.id === manualCustomer.city_id)?.areas?.map((a: any) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                         {areas.map((a: any) => <option key={a.id} value={a.id}>{a.name}</option>)}
                        </select>
                      </div>
                   </div>
@@ -689,6 +1235,60 @@ const BookingsPage: React.FC = () => {
                   placeholder="Describe the issue..." rows={3}
                   style={{ width: '100%', padding: '12px 14px', background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '10px', color: '#e8f5f0', fontSize: '14px', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
                 />
+              </div>
+
+              {/* Location Coordinates & Radius */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: '#0a1a15', padding: '16px', borderRadius: '10px', border: '1px solid #1e3d30' }}>
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#e8f5f0' }}>Service Location & Search Radius</label>
+                  <div style={{ fontSize: '11px', color: '#878787', marginTop: '2px' }}>Set the service location and search radius to request nearby providers</div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px', borderTop: '1px solid #1e3d3040', paddingTop: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#878787', marginBottom: '8px', textTransform: 'uppercase' }}>Search Radius (km) *</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      required
+                      value={createForm.auto_assign_radius}
+                      onChange={e => setCreateForm(p => ({ ...p, auto_assign_radius: parseFloat(e.target.value) || 5 }))}
+                      style={{ width: '100%', padding: '10px 12px', background: '#122b22', border: '1px solid #1e3d30', borderRadius: '8px', color: '#fff', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#878787', marginBottom: '8px', textTransform: 'uppercase' }}>Pin Service Location Coordinates *</label>
+                    <MapPicker
+                      latitude={createForm.latitude}
+                      longitude={createForm.longitude}
+                      onChange={(lat, lng) => setCreateForm(p => ({ ...p, latitude: lat, longitude: lng }))}
+                    />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '8px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '10px', color: '#878787', marginBottom: '4px' }}>Latitude</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={createForm.latitude || ''}
+                          onChange={e => setCreateForm(p => ({ ...p, latitude: parseFloat(e.target.value) || 0 }))}
+                          style={{ width: '100%', padding: '8px 10px', background: '#122b22', border: '1px solid #1e3d30', borderRadius: '6px', color: '#fff', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '10px', color: '#878787', marginBottom: '4px' }}>Longitude</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={createForm.longitude || ''}
+                          onChange={e => setCreateForm(p => ({ ...p, longitude: parseFloat(e.target.value) || 0 }))}
+                          style={{ width: '100%', padding: '8px 10px', background: '#122b22', border: '1px solid #1e3d30', borderRadius: '6px', color: '#fff', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </form>

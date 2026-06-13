@@ -6,7 +6,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   '/dashboard': { title: 'Dashboard',        subtitle: 'Welcome back, here\'s an overview' },
   '/locations':  { title: 'Locations',        subtitle: 'Manage cities and service areas' },
   '/services':   { title: 'Services',         subtitle: 'Manage service categories and offerings' },
-  '/providers':  { title: 'Provider Reviews', subtitle: 'Review and approve provider applications' },
+  '/providers':  { title: 'Service Providers', subtitle: 'Manage registered service providers and applications' },
 };
 
 interface TopbarProps {

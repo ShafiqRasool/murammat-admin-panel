@@ -6,13 +6,14 @@ interface AdminUser {
   id: string;
   email: string;
   roles: string[];
+  permissions?: string[];
 }
 
 interface AuthContextType {
   user: AdminUser | null;
   token: string | null;
   isLoading: boolean;
-  login: (phone: string, password: string, adminSecret: string) => Promise<void>;
+  login: (phone: string, password: string, adminSecret?: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -43,20 +44,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   // Login: calls POST /api/auth/login, expects { token, user }
-  const login = async (phone: string, password: string, adminSecret: string) => {
+  const login = async (phone: string, password: string, adminSecret?: string) => {
     // Store the secret BEFORE the API call so the axios interceptor
     // can attach x-admin-secret-key on the very first request
-    localStorage.setItem('admin_secret', adminSecret);
+    if (adminSecret) {
+      localStorage.setItem('admin_secret', adminSecret);
+    } else {
+      localStorage.removeItem('admin_secret');
+    }
 
     try {
       const response = await api.post('/auth/login', { phone, password });
       const { token: jwtToken, user: userData } = response.data;
 
-      // Verify user has admin role
-      if (!userData?.roles?.includes('admin')) {
+      // Verify user has administrative/staff role (not customer or provider)
+      const hasAdminAccess = userData?.roles?.some(
+        (role: string) => role.toLowerCase() !== 'customer' && role.toLowerCase() !== 'provider'
+      );
+      if (!hasAdminAccess) {
         // Clean up the secret we pre-stored if role check fails
         localStorage.removeItem('admin_secret');
-        throw new Error('Access denied. Admin role required.');
+        throw new Error('Access denied. Administrative access required.');
       }
 
       // Persist full session
@@ -71,6 +79,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw err;
     }
   };
+
 
   const logout = () => {
     localStorage.removeItem('admin_token');
