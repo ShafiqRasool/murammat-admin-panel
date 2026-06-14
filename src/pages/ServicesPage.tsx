@@ -148,6 +148,7 @@ const Divider: React.FC<{ label: string }> = ({ label }) => (
 
 // ─── Services Page ──────────────────────────────────────────────────────
 const ServicesPage: React.FC = () => {
+  const mediaBaseUrl = (import.meta.env.VITE_BACKENDURL || 'http://localhost:3000').replace(/\/$/, '');
   const [tab, setTab]               = useState<'parent_categories' | 'categories' | 'services'>('parent_categories');
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [parentCategories, setParentCategories] = useState<ParentCategory[]>([]);
@@ -350,7 +351,7 @@ const ServicesPage: React.FC = () => {
     setEditParentCat(c); 
     setParentCatName(c.name); 
     setParentCatDesc(c.description ?? ''); 
-    setParentCatImagePreview(c.image_url ? (c.image_url.startsWith('http') ? c.image_url : `http://localhost:3000${c.image_url}`) : null);
+    setParentCatImagePreview(c.image_url ? (c.image_url.startsWith('http') ? c.image_url : `${mediaBaseUrl}${c.image_url}`) : null);
     setParentCatImageFile(null);
     setParentCatModal(true); 
   };
@@ -379,7 +380,7 @@ const ServicesPage: React.FC = () => {
     setCatParentCatId(c.parent_category_id ?? ''); 
     setCatDesc(c.description ?? ''); 
     setCatLongDesc(c.long_description ?? '');
-    setCatImagePreview(c.image_url ? (c.image_url.startsWith('http') ? c.image_url : `http://localhost:3000${c.image_url}`) : null);
+    setCatImagePreview(c.image_url ? (c.image_url.startsWith('http') ? c.image_url : `${mediaBaseUrl}${c.image_url}`) : null);
     setCatImageFile(null);
     setCatModal(true); 
   };
@@ -424,7 +425,7 @@ const ServicesPage: React.FC = () => {
     setSvcExcludes(Array.isArray(s.not_includes) ? s.not_includes : []);
     setSvcIsTop(s.is_top_service ?? false);
     setSvcCanBeRepaired(s.can_be_repaired ?? false);
-    setSvcImagePreview(s.image_url ? (s.image_url.startsWith('http') ? s.image_url : `http://localhost:3000${s.image_url}`) : null);
+    setSvcImagePreview(s.image_url ? (s.image_url.startsWith('http') ? s.image_url : `${mediaBaseUrl}${s.image_url}`) : null);
     setSvcModal(true);
   };
 
