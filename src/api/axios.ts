@@ -2,9 +2,10 @@ import axios from 'axios';
 
 // Read base URL from .env — variable name: VITE_BACKENDURL
 const BASE_URL = import.meta.env.VITE_BACKENDURL || 'http://localhost:3000';
+const cleanBaseUrl = BASE_URL.endsWith('/api') ? BASE_URL : `${BASE_URL}/api`;
 
 const api = axios.create({
-  baseURL: `${BASE_URL}/api`,
+  baseURL: cleanBaseUrl,
   headers: { 'Content-Type': 'application/json' },
 });
 

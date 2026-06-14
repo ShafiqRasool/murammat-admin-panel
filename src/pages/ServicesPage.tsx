@@ -148,7 +148,9 @@ const Divider: React.FC<{ label: string }> = ({ label }) => (
 
 // ─── Services Page ──────────────────────────────────────────────────────
 const ServicesPage: React.FC = () => {
-  const mediaBaseUrl = (import.meta.env.VITE_BACKENDURL || 'http://localhost:3000').replace(/\/$/, '');
+  const mediaBaseUrl = (import.meta.env.VITE_BACKENDURL || 'http://localhost:3000')
+    .replace(/\/$/, '')
+    .replace(/\/api$/, '');
   const [tab, setTab]               = useState<'parent_categories' | 'categories' | 'services'>('parent_categories');
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [parentCategories, setParentCategories] = useState<ParentCategory[]>([]);
