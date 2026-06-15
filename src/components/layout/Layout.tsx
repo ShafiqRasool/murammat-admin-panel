@@ -10,7 +10,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#0d1f1a' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)', transition: 'background 0.3s ease' }}>
       {/* ── Sidebar ── */}
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(p => !p)} />
 

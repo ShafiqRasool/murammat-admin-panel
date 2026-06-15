@@ -29,7 +29,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; permission?: string 
     // Full-screen loading spinner while checking session
     return (
       <div style={{
-        minHeight: '100vh', background: '#0d1f1a',
+        minHeight: '100vh', background: 'var(--bg)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         flexDirection: 'column', gap: '16px',
       }}>

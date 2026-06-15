@@ -3,10 +3,10 @@
 
 /* =============================================
    MURAMMAT ADMIN — DESIGN SYSTEM TOKENS
-   Primary: #00674F  |  Secondary: #878787
+   Primary: #00674F (Green) | Dark Theme = dark green
+   Light Theme = clean white with green accents
    ============================================= */
 @theme {
-  /* Brand Colors */
   --color-primary:        #00674F;
   --color-primary-hover:  #005240;
   --color-primary-light:  #00674F22;
@@ -14,22 +14,6 @@
   --color-secondary:      #878787;
   --color-secondary-dark: #5a5a5a;
 
-  /* Dark Background Layers */
-  --color-bg:             #0d1f1a;
-  --color-sidebar:        #0a1a15;
-  --color-surface:        #122b22;
-  --color-surface-hover:  #183828;
-  --color-surface-raised: #1d4535;
-  --color-border:         #1e3d30;
-  --color-border-light:   #234838;
-
-  /* Text */
-  --color-text-primary:   #e8f5f0;
-  --color-text-secondary: #878787;
-  --color-text-muted:     #4a6b5e;
-  --color-text-inverse:   #ffffff;
-
-  /* Status */
   --color-success:        #00674F;
   --color-success-bg:     #00674F20;
   --color-warning:        #d97706;
@@ -39,40 +23,77 @@
   --color-info:           #0891b2;
   --color-info-bg:        #0891b220;
 
-  /* Animations */
   --animate-fade-in:      fadeIn 0.25s ease-out;
   --animate-slide-up:     slideUp 0.3s ease-out;
   --animate-slide-in:     slideIn 0.25s ease-out;
   --animate-modal-in:     modalIn 0.2s ease-out;
 
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-  }
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(16px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes slideIn {
-    from { opacity: 0; transform: translateX(-16px); }
-    to   { opacity: 1; transform: translateX(0); }
-  }
-  @keyframes modalIn {
-    from { opacity: 0; transform: scale(0.95) translateY(8px); }
-    to   { opacity: 1; transform: scale(1) translateY(0); }
-  }
-  @keyframes toastSlide {
-    from { opacity: 0; transform: translateX(100%); }
-    to   { opacity: 1; transform: translateX(0); }
-  }
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+  @keyframes toastSlide { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
 }
 
-/* =============================================
-   BASE STYLES
-   ============================================= */
+/* ─── LIGHT THEME (default) ───────────────────────── */
+:root,
+[data-theme="light"] {
+  --bg:             #f0f9f5;
+  --surface:        #ffffff;
+  --surface-hover:  #f0f9f5;
+  --surface-raised: #e0f3ec;
+  --border:         #c8e6d8;
+  --border-light:   #d8ede5;
+  --text-primary:   #0a2018;
+  --text-secondary: #3a6b54;
+  --text-muted:     #7ab09a;
+  --text-inverse:   #ffffff;
+  --sidebar-bg:     linear-gradient(180deg, #00674F 0%, #005240 100%);
+  --topbar-bg:      #ffffff;
+  --topbar-border:  #c8e6d8;
+  --card-bg:        #ffffff;
+  --card-border:    #c8e6d8;
+  --input-bg:       #f0f9f5;
+  --input-border:   #c8e6d8;
+  --scrollbar-track: #e0f3ec;
+  --scrollbar-thumb: #a8d8c4;
+  --table-header-bg: #00674F;
+  --table-header-text: #b0d8c8;
+  --table-row-hover: #e0f3ec;
+  --pagination-bg:  #00674F;
+  --shadow-card:    0 2px 12px rgba(0,103,79,0.08);
+}
+
+/* ─── DARK THEME ──────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:             #0d1f1a;
+  --surface:        #122b22;
+  --surface-hover:  #183828;
+  --surface-raised: #1d4535;
+  --border:         #1e3d30;
+  --border-light:   #234838;
+  --text-primary:   #e8f5f0;
+  --text-secondary: #878787;
+  --text-muted:     #4a6b5e;
+  --text-inverse:   #ffffff;
+  --sidebar-bg:     linear-gradient(180deg, #0a1a15 0%, #071410 100%);
+  --topbar-bg:      #122b22;
+  --topbar-border:  #1e3d30;
+  --card-bg:        #122b22;
+  --card-border:    #1e3d30;
+  --input-bg:       #0a1a15;
+  --input-border:   #1e3d30;
+  --scrollbar-track: #0a1a15;
+  --scrollbar-thumb: #1e3d30;
+  --table-header-bg: #0a1a15;
+  --table-header-text: #4a6b5e;
+  --table-row-hover: #183828;
+  --pagination-bg:  #0a1a15;
+  --shadow-card:    0 2px 12px rgba(0,0,0,0.4);
+}
+
+/* ─── BASE ─────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
 html {
@@ -82,29 +103,28 @@ html {
 }
 
 body {
-  margin: 0;
-  padding: 0;
-  background-color: #0d1f1a;
-  color: #e8f5f0;
+  margin: 0; padding: 0;
+  background-color: var(--bg);
+  color: var(--text-primary);
   font-family: 'Inter', sans-serif;
   min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Scrollbar Styling */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #0a1a15; }
-::-webkit-scrollbar-thumb { background: #1e3d30; border-radius: 3px; }
+::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #00674F60; }
 
-/* Input / Select base overrides */
 input, select, textarea {
   font-family: 'Inter', sans-serif;
   outline: none;
+  background-color: var(--input-bg);
+  color: var(--text-primary);
 }
 input:focus, select:focus, textarea:focus {
   border-color: #00674F !important;
   box-shadow: 0 0 0 2px #00674F30;
 }
 
-/* Selection highlight */
-::selection { background: #00674F40; color: #e8f5f0; }
+::selection { background: #00674F40; color: var(--text-primary); }

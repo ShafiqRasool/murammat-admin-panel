@@ -155,11 +155,11 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       style={{
         width: collapsed ? '72px' : '240px',
         minHeight: '100vh',
-        background: '#0a1a15',
-        borderRight: '1px solid #1e3d30',
+        background: 'var(--sidebar-bg)',
+        borderRight: '1px solid var(--border)',
         display: 'flex',
         flexDirection: 'column',
-        transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease',
         position: 'fixed',
         top: 0,
         left: 0,
@@ -171,7 +171,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       {/* ── Logo / Brand ── */}
       <div style={{
         padding: '20px 16px',
-        borderBottom: '1px solid #1e3d30',
+        borderBottom: '1px solid var(--border)',
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
@@ -195,10 +195,10 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
         </div>
         {!collapsed && (
           <div style={{ animation: 'fadeIn 0.2s ease-out' }}>
-            <div style={{ fontWeight: 700, fontSize: '15px', color: '#e8f5f0', lineHeight: 1.2 }}>
+            <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-inverse)', lineHeight: 1.2 }}>
               Murammat
             </div>
-            <div style={{ fontSize: '11px', color: '#878787', fontWeight: 500 }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>
               Admin Panel
             </div>
           </div>
@@ -238,14 +238,14 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
-                  (e.currentTarget as HTMLElement).style.background = '#122b22';
-                  (e.currentTarget as HTMLElement).style.color = '#e8f5f0';
+                  (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.12)';
+                  (e.currentTarget as HTMLElement).style.color = '#ffffff';
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isActive) {
                   (e.currentTarget as HTMLElement).style.background = 'transparent';
-                  (e.currentTarget as HTMLElement).style.color = '#878787';
+                  (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.6)';
                 }
               }}
             >
@@ -257,17 +257,17 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       </nav>
 
       {/* ── User Info + Logout ── */}
-      <div style={{ padding: '12px 8px', borderTop: '1px solid #1e3d30' }}>
+      <div style={{ padding: '12px 8px', borderTop: '1px solid var(--border)' }}>
         {!collapsed && user && (
           <div style={{
             padding: '10px 12px',
             marginBottom: '8px',
-            background: '#122b22',
+            background: 'rgba(255,255,255,0.08)',
             borderRadius: '10px',
             animation: 'fadeIn 0.2s ease-out',
           }}>
-            <div style={{ fontSize: '12px', color: '#878787', marginBottom: '2px' }}>Logged in as</div>
-            <div style={{ fontSize: '13px', color: '#e8f5f0', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '2px' }}>Logged in as</div>
+            <div style={{ fontSize: '13px', color: '#ffffff', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {user.email}
             </div>
           </div>
@@ -318,9 +318,9 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
           width: '28px',
           height: '28px',
           borderRadius: '50%',
-          border: '1px solid #1e3d30',
-          background: '#0a1a15',
-          color: '#878787',
+          border: '1px solid var(--border)',
+          background: 'var(--bg)',
+          color: 'var(--text-secondary)',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
@@ -334,9 +334,9 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
           (e.currentTarget as HTMLElement).style.borderColor = '#00674F';
         }}
         onMouseLeave={e => {
-          (e.currentTarget as HTMLElement).style.background = '#0a1a15';
-          (e.currentTarget as HTMLElement).style.color = '#878787';
-          (e.currentTarget as HTMLElement).style.borderColor = '#1e3d30';
+          (e.currentTarget as HTMLElement).style.background = 'var(--bg)';
+          (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)';
+          (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
         }}
       >
         <svg
