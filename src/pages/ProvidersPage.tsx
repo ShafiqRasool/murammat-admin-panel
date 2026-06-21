@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { getProviders, approveProvider, createProvider, updateProvider, type Provider, type ApprovalStatus, type CreateProviderPayload } from '../api/provider.api';
+import { getProviders, approveProvider, createProvider, updateProvider, uploadProviderImage, type Provider, type ApprovalStatus, type CreateProviderPayload } from '../api/provider.api';
+import ImageUploadWithCrop from '../components/ui/ImageUploadWithCrop';
 import Badge, { statusVariant } from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -90,6 +91,10 @@ const ProvidersPage: React.FC = () => {
   const [selectedCityId, setSelectedCityId] = useState<string>('');
   const [selectedAreaId, setSelectedAreaId] = useState<string>('');
 
+  // Profile image upload states
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+
   useEffect(() => {
     getCategories().then(setCategories).catch(() => {});
     getServices().then(setServices).catch(() => {});
@@ -105,6 +110,23 @@ const ProvidersPage: React.FC = () => {
     }
   }, [selectedCityId]);
 
+  const formatCNIC = (value: string): string => {
+    const numbers = value.replace(/\D/g, '');
+    const truncated = numbers.slice(0, 13);
+    if (truncated.length <= 5) {
+      return truncated;
+    } else if (truncated.length <= 12) {
+      return `${truncated.slice(0, 5)}-${truncated.slice(5)}`;
+    } else {
+      return `${truncated.slice(0, 5)}-${truncated.slice(5, 12)}-${truncated.slice(12)}`;
+    }
+  };
+
+  const handleCnicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCNIC(e.target.value);
+    setForm(prev => ({ ...prev, cnic: formatted }));
+  };
+
   const emptyForm = (): CreateProviderPayload => ({
     first_name: '',
     last_name: '',
@@ -112,6 +134,7 @@ const ProvidersPage: React.FC = () => {
     phone: '',
     company_name: '',
     password: '',
+    cnic: '',
   });
 
   const [form, setForm] = useState<CreateProviderPayload>(emptyForm());
@@ -134,10 +157,13 @@ const ProvidersPage: React.FC = () => {
       phone: p.phone || '',
       company_name: p.company_name || '',
       password: '',
+      cnic: p.cnic || '',
     });
     setSelectedCityId(p.city_ids?.[0] || '');
     setSelectedAreaId(p.area_ids?.[0] || '');
     setSelectedServices(p.service_ids || []);
+    setProfileImageFile(null);
+    setProfileImagePreview(p.profile_image || null);
     setShowPassword(false);
     setAddOpen(true);
   };
@@ -152,6 +178,19 @@ const ProvidersPage: React.FC = () => {
       toast('Password is required for new providers', 'error');
       return;
     }
+    if (!form.cnic?.trim()) {
+      toast('CNIC is required', 'error');
+      return;
+    }
+    const cnicRegex = /^\d{5}-\d{7}-\d{1}$/;
+    if (!cnicRegex.test(form.cnic)) {
+      toast('Invalid CNIC format. Expected: XXXXX-XXXXXXX-X', 'error');
+      return;
+    }
+    if (!editingProvider && !profileImageFile) {
+      toast('Profile picture is required for new providers', 'error');
+      return;
+    }
     if (!selectedCityId || !selectedAreaId) {
       toast('City and Area selection are required', 'error');
       return;
@@ -159,28 +198,46 @@ const ProvidersPage: React.FC = () => {
     setSubmitting(true);
     try {
       if (editingProvider) {
-        const updated = await updateProvider(editingProvider.provider_id, {
+        let updated = await updateProvider(editingProvider.provider_id, {
           ...form,
           service_ids: selectedServices,
           area_ids: [selectedAreaId],
         });
+        if (profileImageFile) {
+          const uploadRes = await uploadProviderImage(editingProvider.provider_id, profileImageFile);
+          updated = {
+            ...updated,
+            profile_image: uploadRes.profile_image,
+          };
+        }
         setProviders(prev => prev.map(p => p.provider_id === editingProvider.provider_id ? updated : p));
         setAddOpen(false);
         setEditingProvider(null);
         setForm(emptyForm());
+        setProfileImageFile(null);
+        setProfileImagePreview(null);
         setSelectedServices([]);
         setSelectedCityId('');
         setSelectedAreaId('');
         toast('Provider updated successfully', 'success');
       } else {
-        const newProvider = await createProvider({
+        let newProvider = await createProvider({
           ...form,
           service_ids: selectedServices,
           area_ids: [selectedAreaId],
         });
+        if (profileImageFile) {
+          const uploadRes = await uploadProviderImage(newProvider.provider_id, profileImageFile);
+          newProvider = {
+            ...newProvider,
+            profile_image: uploadRes.profile_image,
+          };
+        }
         setProviders(prev => [newProvider, ...prev]);
         setAddOpen(false);
         setForm(emptyForm());
+        setProfileImageFile(null);
+        setProfileImagePreview(null);
         setSelectedServices([]);
         setSelectedCityId('');
         setSelectedAreaId('');
@@ -255,7 +312,7 @@ const ProvidersPage: React.FC = () => {
         </div>
         <button
           id="add-provider-btn"
-          onClick={() => { setAddOpen(true); setEditingProvider(null); setForm(emptyForm()); setSelectedServices([]); setSelectedCityId(''); setSelectedAreaId(''); setShowPassword(false); }}
+          onClick={() => { setAddOpen(true); setEditingProvider(null); setForm(emptyForm()); setProfileImageFile(null); setProfileImagePreview(null); setSelectedServices([]); setSelectedCityId(''); setSelectedAreaId(''); setShowPassword(false); }}
           style={{
             display: 'flex', alignItems: 'center', gap: '8px',
             padding: '10px 20px', borderRadius: '10px', border: 'none',
@@ -375,8 +432,13 @@ const ProvidersPage: React.FC = () => {
                     background: '#00674F25', color: '#00674F',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: '13px', fontWeight: 700, flexShrink: 0,
+                    overflow: 'hidden',
                   }}>
-                    {(p.first_name?.[0] ?? p.company_name?.[0] ?? '?').toUpperCase()}
+                    {p.profile_image ? (
+                      <img src={p.profile_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      (p.first_name?.[0] ?? p.company_name?.[0] ?? '?').toUpperCase()
+                    )}
                   </div>
                   <span style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: 500 }}>
                     {providerDisplayName(p)}
@@ -516,9 +578,14 @@ const ProvidersPage: React.FC = () => {
                 width: '54px', height: '54px', borderRadius: '50%',
                 background: '#00674F25', color: '#00a87a',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '20px', fontWeight: 800, border: '1px solid #00674F40', flexShrink: 0
+                fontSize: '20px', fontWeight: 800, border: '1px solid #00674F40', flexShrink: 0,
+                overflow: 'hidden',
               }}>
-                {(selected.first_name?.[0] ?? selected.company_name?.[0] ?? '?').toUpperCase()}
+                {selected.profile_image ? (
+                  <img src={selected.profile_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  (selected.first_name?.[0] ?? selected.company_name?.[0] ?? '?').toUpperCase()
+                )}
               </div>
               <div style={{ flex: 1 }}>
                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>{providerDisplayName(selected)}</h3>
@@ -537,9 +604,13 @@ const ProvidersPage: React.FC = () => {
                 <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Phone Number</span>
                 <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{selected.phone || '—'}</span>
               </div>
-              <div style={{ gridColumn: 'span 2', padding: '12px', background: '#0d241c50', borderRadius: '10px', border: '1px solid #1e3d3030' }}>
+              <div style={{ padding: '12px', background: '#0d241c50', borderRadius: '10px', border: '1px solid #1e3d3030' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>CNIC Number</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{selected.cnic || '—'}</span>
+              </div>
+              <div style={{ padding: '12px', background: '#0d241c50', borderRadius: '10px', border: '1px solid #1e3d3030' }}>
                 <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Registration Date</span>
-                <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{new Date(selected.created_at).toLocaleString()}</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{new Date(selected.created_at).toLocaleDateString()}</span>
               </div>
             </div>
 
@@ -590,13 +661,13 @@ const ProvidersPage: React.FC = () => {
       {/* ── Add Provider Modal ── */}
       <Modal
         isOpen={addOpen}
-        onClose={() => { setAddOpen(false); setEditingProvider(null); setForm(emptyForm()); setSelectedServices([]); setSelectedCityId(''); setSelectedAreaId(''); }}
+        onClose={() => { setAddOpen(false); setEditingProvider(null); setForm(emptyForm()); setProfileImageFile(null); setProfileImagePreview(null); setSelectedServices([]); setSelectedCityId(''); setSelectedAreaId(''); }}
         title={editingProvider ? 'Edit Provider' : 'Add New Provider'}
         subtitle={editingProvider ? `Modify profile details for ${providerDisplayName(editingProvider)}` : 'Manually create a service provider account'}
         width="560px"
         footer={
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-            <Button variant="ghost" onClick={() => { setAddOpen(false); setEditingProvider(null); setForm(emptyForm()); setSelectedServices([]); setSelectedCityId(''); setSelectedAreaId(''); }}>
+            <Button variant="ghost" onClick={() => { setAddOpen(false); setEditingProvider(null); setForm(emptyForm()); setProfileImageFile(null); setProfileImagePreview(null); setSelectedServices([]); setSelectedCityId(''); setSelectedAreaId(''); }}>
               Cancel
             </Button>
             <button
@@ -620,6 +691,20 @@ const ProvidersPage: React.FC = () => {
         <form id="add-provider-form" onSubmit={handleAddProvider}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
+            {/* Profile Picture Uploader */}
+            <div>
+              <ImageUploadWithCrop
+                label="Profile Picture"
+                required={!editingProvider}
+                maxMB={2}
+                quality={0.8}
+                currentPreview={profileImagePreview}
+                onFileReady={(file) => {
+                  setProfileImageFile(file);
+                }}
+              />
+            </div>
+
             {/* Name row */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
@@ -636,6 +721,19 @@ const ProvidersPage: React.FC = () => {
             <div>
               <label style={labelStyle}>Company Name <span style={{ color: '#dc2626' }}>*</span></label>
               <input id="prov-company" required value={form.company_name} onChange={setField('company_name')} placeholder="Murammat Services" style={inputStyle} />
+            </div>
+
+            {/* CNIC Number */}
+            <div>
+              <label style={labelStyle}>CNIC Number <span style={{ color: '#dc2626' }}>*</span></label>
+              <input
+                id="prov-cnic"
+                required
+                value={form.cnic}
+                onChange={handleCnicChange}
+                placeholder="35201-1234567-1"
+                style={inputStyle}
+              />
             </div>
 
             {/* Email */}

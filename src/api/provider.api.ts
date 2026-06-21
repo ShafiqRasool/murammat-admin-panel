@@ -16,6 +16,8 @@ export interface Provider {
   category_ids: string[];
   area_ids: string[];
   city_ids: string[];
+  cnic: string | null;
+  profile_image: string | null;
 }
 
 export type ApprovalStatus = 'approved' | 'rejected' | 'unapproved' | 'pending';
@@ -50,6 +52,7 @@ export interface CreateProviderPayload {
   password?: string;
   service_ids?: string[];
   area_ids?: string[];
+  cnic: string;
 }
 
 export const createProvider = (payload: CreateProviderPayload) =>
@@ -57,3 +60,13 @@ export const createProvider = (payload: CreateProviderPayload) =>
 
 export const updateProvider = (providerId: string, payload: CreateProviderPayload) =>
   api.put<Provider>(`/admin/providers/${providerId}`, payload).then(r => r.data);
+
+export const uploadProviderImage = (providerId: string, file: File) => {
+  const formData = new FormData();
+  formData.append('image', file);
+  return api.post<{ profile_image: string }>(`/admin/providers/${providerId}/image`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  }).then(r => r.data);
+};
