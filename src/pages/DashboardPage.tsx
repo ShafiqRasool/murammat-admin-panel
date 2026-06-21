@@ -3,9 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
-  type TooltipProps,
 } from 'recharts';
-import type { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
 import { getCities, getAreas } from '../api/location.api';
 import { getCategories, getServices } from '../api/service.api';
 import { getProviders } from '../api/provider.api';
@@ -645,7 +643,7 @@ const DashboardPage: React.FC = () => {
                 <Pie data={bookingStatusData} cx="50%" cy="50%" innerRadius={55} outerRadius={90} paddingAngle={3} dataKey="value">
                   {bookingStatusData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                 </Pie>
-                <Tooltip contentStyle={{ background: tooltipBg, border: `1px solid ${tooltipBorder}`, borderRadius: '10px' }} formatter={(val: ValueType, name: NameType) => [val, name]} />
+                <Tooltip contentStyle={{ background: tooltipBg, border: `1px solid ${tooltipBorder}`, borderRadius: '10px' }} formatter={(val: any, name: any) => [val, name]} />
                 <Legend wrapperStyle={{ fontSize: '12px' }} formatter={(value: string, entry: any) => <span style={{ color: 'var(--text-secondary)' }}>{value}: {entry.payload?.value ?? 0}</span>} />
               </PieChart>
             </ResponsiveContainer>
