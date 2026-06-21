@@ -28,9 +28,9 @@ const avatarLetter = (c: Customer) =>
 
 // ─── Stat Mini Card ──────────────────────────────────────────────────────
 const MiniStat: React.FC<{ label: string; value: string | number; color: string }> = ({ label, value, color }) => (
-  <div style={{ background: '#0a1a15', borderRadius: '10px', padding: '12px 16px', border: `1px solid ${color}30`, textAlign: 'center' }}>
+  <div style={{ background: 'var(--input-bg)', borderRadius: '10px', padding: '12px 16px', border: `1px solid ${color}30`, textAlign: 'center' }}>
     <div style={{ fontSize: '20px', fontWeight: 800, color }}>{value}</div>
-    <div style={{ fontSize: '11px', color: '#878787', marginTop: '2px' }}>{label}</div>
+    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>{label}</div>
   </div>
 );
 
@@ -38,10 +38,10 @@ const MiniStat: React.FC<{ label: string; value: string | number; color: string 
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '10px 14px',
-  background: '#0a1a15',
-  border: '1px solid #1e3d30',
+  background: 'var(--input-bg)',
+  border: '1px solid var(--border)',
   borderRadius: '10px',
-  color: '#e8f5f0',
+  color: 'var(--text-primary)',
   fontSize: '13px',
   outline: 'none',
   boxSizing: 'border-box',
@@ -50,7 +50,7 @@ const inputStyle: React.CSSProperties = {
 const labelStyle: React.CSSProperties = {
   fontSize: '12px',
   fontWeight: 600,
-  color: '#878787',
+  color: 'var(--text-secondary)',
   marginBottom: '6px',
   display: 'block',
   textTransform: 'uppercase',
@@ -198,8 +198,8 @@ const CustomersPage: React.FC = () => {
       {/* ── Header ── */}
       <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#e8f5f0' }}>Customers</h2>
-          <p style={{ margin: '4px 0 0', color: '#878787', fontSize: '13px' }}>
+          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)' }}>Customers</h2>
+          <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: '13px' }}>
             Manage and filter all registered customers
           </p>
         </div>
@@ -238,32 +238,32 @@ const CustomersPage: React.FC = () => {
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
           <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="15" height="15"
-              style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: '#4a6b5e' }}>
+              style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
             <input
               value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search by name, email or phone…"
-              style={{ width: '100%', padding: '10px 14px 10px 38px', background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '10px', color: '#e8f5f0', fontSize: '13px' }}
+              style={{ width: '100%', padding: '10px 14px 10px 38px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', fontSize: '13px' }}
             />
           </div>
           <select
             value={categoryId} onChange={e => setCategoryId(e.target.value)}
-            style={{ padding: '10.5px 14px', background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '10px', color: '#e8f5f0', fontSize: '13px', cursor: 'pointer', minWidth: '160px' }}
+            style={{ padding: '10.5px 14px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', fontSize: '13px', cursor: 'pointer', minWidth: '160px' }}
           >
             <option value="all">All Services</option>
             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
 
-        <div style={{ display: 'flex', gap: '6px', background: '#0a1a15', padding: '6px', borderRadius: '12px', border: '1px solid #1e3d30', overflowX: 'auto' }}>
+        <div style={{ display: 'flex', gap: '6px', background: 'var(--input-bg)', padding: '6px', borderRadius: '12px', border: '1px solid var(--border)', overflowX: 'auto' }}>
           {PERIOD_TABS.map(t => (
             <button
               key={t.key} onClick={() => setPeriod(t.key as CustomerFilters['period'])}
               style={{
                 padding: '8px 20px', borderRadius: '8px', border: 'none',
-                background: period === t.key ? (t.color ?? '#1e3d30') : 'transparent',
-                color: period === t.key ? '#fff' : '#878787',
+                background: period === t.key ? (t.color ?? 'var(--border)') : 'transparent',
+                color: period === t.key ? '#fff' : 'var(--text-secondary)',
                 fontWeight: period === t.key ? 600 : 500,
                 fontSize: '13px', cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap',
               }}
@@ -275,8 +275,8 @@ const CustomersPage: React.FC = () => {
       </div>
 
       {/* ── Table ── */}
-      <div style={{ background: '#122b22', border: '1px solid #1e3d30', borderRadius: '12px', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', padding: '12px 16px', borderBottom: '1px solid #1e3d30', background: '#0d241c' }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface-raised)' }}>
           {[
             { label: 'Customer', flex: 1.8 },
             { label: 'Contact', flex: 1.4 },
@@ -285,16 +285,16 @@ const CustomersPage: React.FC = () => {
             { label: 'Spent', flex: 0.9, align: 'right' },
             { label: 'Joined', flex: 0.9 },
           ].map(col => (
-            <div key={col.label} style={{ flex: col.flex, fontSize: '11px', fontWeight: 700, color: '#878787', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: (col.align as any) || 'left' }}>
+            <div key={col.label} style={{ flex: col.flex, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: (col.align as any) || 'left' }}>
               {col.label}
             </div>
           ))}
         </div>
 
         {loading ? (
-          <div style={{ padding: '60px', textAlign: 'center', color: '#4a6b5e' }}>Loading customers…</div>
+          <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading customers…</div>
         ) : customers.length === 0 ? (
-          <div style={{ padding: '60px', textAlign: 'center', color: '#4a6b5e' }}>
+          <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} width="48" height="48" style={{ marginBottom: '12px', opacity: 0.4 }}>
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
               <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
@@ -307,7 +307,7 @@ const CustomersPage: React.FC = () => {
               key={c.id}
               onClick={() => setSelected(c)}
               style={{ display: 'flex', alignItems: 'center', padding: '14px 16px', borderBottom: i < customers.length - 1 ? '1px solid #1e3d3060' : 'none', cursor: 'pointer', transition: 'background 0.12s' }}
-              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#183828'}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--table-row-hover)'}
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
             >
               <div style={{ flex: 1.8, display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -315,28 +315,28 @@ const CustomersPage: React.FC = () => {
                   {avatarLetter(c)}
                 </div>
                 <div style={{ overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#e8f5f0', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-primary)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {displayName(c)}
                     <span style={{ padding: '2px 6px', borderRadius: '4px', background: c.registration_method === 'manual' ? '#d9770630' : '#00674F30', color: c.registration_method === 'manual' ? '#d97706' : '#00c896', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }}>
                        {c.registration_method === 'manual' ? 'Manual' : 'Registered'}
                     </span>
                   </div>
-                  <div style={{ fontSize: '11px', color: '#4a6b5e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.email || c.phone}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.email || c.phone}</div>
                 </div>
               </div>
-              <div style={{ flex: 1.4, fontSize: '12px', color: '#878787' }}>{c.phone || '—'}</div>
-              <div style={{ flex: 1.2, fontSize: '12px', color: '#878787', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ flex: 1.4, fontSize: '12px', color: 'var(--text-secondary)' }}>{c.phone || '—'}</div>
+              <div style={{ flex: 1.2, fontSize: '12px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {[c.area_name, c.city_name].filter(Boolean).join(', ') || '—'}
               </div>
               <div style={{ flex: 0.8, textAlign: 'center' }}>
-                <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: '12px', background: c.total_bookings > 0 ? '#00674F20' : '#1e3d30', color: c.total_bookings > 0 ? '#00c896' : '#4a6b5e', fontSize: '12px', fontWeight: 700 }}>
+                <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: '12px', background: c.total_bookings > 0 ? '#00674F20' : 'var(--surface-raised)', color: c.total_bookings > 0 ? '#00c896' : 'var(--text-muted)', fontSize: '12px', fontWeight: 700 }}>
                   {c.total_bookings}
                 </span>
               </div>
               <div style={{ flex: 0.9, textAlign: 'right', fontSize: '13px', color: '#00674F', fontWeight: 600 }}>
                 {c.total_spent > 0 ? fmt(c.total_spent) : '—'}
               </div>
-              <div style={{ flex: 0.9, fontSize: '11px', color: '#4a6b5e' }}>
+              <div style={{ flex: 0.9, fontSize: '11px', color: 'var(--text-muted)' }}>
                 {new Date(c.created_at).toLocaleDateString()}
               </div>
             </div>
@@ -367,8 +367,8 @@ const CustomersPage: React.FC = () => {
               <MiniStat label="Completed" value={selected.completed_bookings} color="#00c896" />
               <MiniStat label="Cancelled" value={selected.cancelled_bookings} color="#dc2626" />
             </div>
-            <div style={{ background: '#0a1a15', border: '1px solid #00674F40', borderRadius: '12px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '13px', color: '#878787' }}>Total Amount Spent</span>
+            <div style={{ background: 'var(--input-bg)', border: '1px solid #00674F40', borderRadius: '12px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Total Amount Spent</span>
               <span style={{ fontSize: '22px', fontWeight: 800, color: '#00c896' }}>{fmt(selected.total_spent)}</span>
             </div>
             {[
@@ -383,31 +383,31 @@ const CustomersPage: React.FC = () => {
               { label: 'Last Booking', value: selected.last_booking_at ? new Date(selected.last_booking_at).toLocaleString() : 'Never' },
             ].map(({ label, value }) => (
               <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #1e3d3050' }}>
-                <span style={{ fontSize: '13px', color: '#878787', fontWeight: 500 }}>{label}</span>
-                <span style={{ fontSize: '13px', color: '#e8f5f0', textAlign: 'right', maxWidth: '65%', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-primary)', textAlign: 'right', maxWidth: '65%', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</span>
               </div>
             ))}
 
             <div style={{ marginTop: '16px' }}>
-              <h4 style={{ color: '#e8f5f0', fontSize: '14px', margin: '0 0 12px' }}>Order History</h4>
+              <h4 style={{ color: 'var(--text-primary)', fontSize: '14px', margin: '0 0 12px' }}>Order History</h4>
               {loadingBookings ? (
-                <div style={{ fontSize: '13px', color: '#4a6b5e' }}>Loading orders...</div>
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Loading orders...</div>
               ) : customerBookings.length === 0 ? (
-                <div style={{ fontSize: '13px', color: '#4a6b5e' }}>No orders found for this customer.</div>
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>No orders found for this customer.</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '250px', overflowY: 'auto', paddingRight: '4px' }}>
                   {customerBookings.map(b => (
-                    <div key={b.id} style={{ background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '10px', padding: '12px' }}>
+                    <div key={b.id} style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#e8f5f0' }}>Order #{b.id.split('-')[0].toUpperCase()}</span>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Order #{b.id.split('-')[0].toUpperCase()}</span>
                         <Badge variant={statusVariant(b.status)}>{b.status.replace('_', ' ')}</Badge>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#878787' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-secondary)' }}>
                         <span>{new Date(b.created_at).toLocaleDateString()}</span>
                         <span style={{ color: '#00c896', fontWeight: 600 }}>PKR {b.total_amount?.toLocaleString() || 0}</span>
                       </div>
-                      <div style={{ fontSize: '12px', color: '#4a6b5e', marginTop: '6px' }}>
-                        Provider: <span style={{ color: b.provider_name ? '#e8f5f0' : '#878787' }}>{b.provider_name || 'Unassigned'}</span>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
+                        Provider: <span style={{ color: b.provider_name ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{b.provider_name || 'Unassigned'}</span>
                       </div>
                     </div>
                   ))}
@@ -436,8 +436,8 @@ const CustomersPage: React.FC = () => {
               disabled={submitting}
               style={{
                 padding: '10px 24px', borderRadius: '10px', border: 'none',
-                background: submitting ? '#1e3d30' : 'linear-gradient(135deg, #00674F, #00a87a)',
-                color: submitting ? '#4a6b5e' : '#fff',
+                background: submitting ? 'var(--border)' : 'linear-gradient(135deg, #00674F, #00a87a)',
+                color: submitting ? 'var(--text-muted)' : '#fff',
                 fontWeight: 700, fontSize: '13px',
                 cursor: submitting ? 'not-allowed' : 'pointer',
                 transition: 'all 0.15s',
@@ -491,7 +491,7 @@ const CustomersPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(v => !v)}
-                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#4a6b5e', padding: 0 }}
+                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0 }}
                 >
                   {showPassword ? (
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="16" height="16">
@@ -510,8 +510,8 @@ const CustomersPage: React.FC = () => {
             </div>
 
             {/* Address section divider */}
-            <div style={{ borderTop: '1px solid #1e3d30', paddingTop: '4px' }}>
-              <span style={{ fontSize: '11px', color: '#4a6b5e', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '4px' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                 Address (optional)
               </span>
             </div>

@@ -18,16 +18,16 @@ const TABS: { key: FilterTab; label: string; color?: string }[] = [
   { key: 'approved',   label: 'Approved',       color: '#00674F' },
   { key: 'rejected',   label: 'Rejected',       color: '#dc2626' },
   { key: 'online',     label: '🟢 Online',       color: '#00c896' },
-  { key: 'offline',    label: '⚫ Offline',       color: '#4a6b5e' },
+  { key: 'offline',    label: '⚫ Offline',       color: 'var(--text-muted)' },
 ];
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '10px 14px',
-  background: '#0a1a15',
-  border: '1px solid #1e3d30',
+  background: 'var(--input-bg)',
+  border: '1px solid var(--border)',
   borderRadius: '10px',
-  color: '#e8f5f0',
+  color: 'var(--text-primary)',
   fontSize: '13px',
   outline: 'none',
   boxSizing: 'border-box',
@@ -36,7 +36,7 @@ const inputStyle: React.CSSProperties = {
 const labelStyle: React.CSSProperties = {
   fontSize: '12px',
   fontWeight: 600,
-  color: '#878787',
+  color: 'var(--text-secondary)',
   marginBottom: '6px',
   display: 'block',
   textTransform: 'uppercase',
@@ -248,8 +248,8 @@ const ProvidersPage: React.FC = () => {
       {/* ── Header ── */}
       <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#e8f5f0' }}>Service Providers</h2>
-          <p style={{ margin: '4px 0 0', color: '#878787', fontSize: '13px' }}>
+          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)' }}>Service Providers</h2>
+          <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: '13px' }}>
             Manage and approve service provider accounts
           </p>
         </div>
@@ -277,7 +277,7 @@ const ProvidersPage: React.FC = () => {
       {/* ── Filter Tabs + Search ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '4px', background: '#0a1a15', padding: '5px', borderRadius: '10px', border: '1px solid #1e3d30', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '4px', background: 'var(--input-bg)', padding: '5px', borderRadius: '10px', border: '1px solid var(--border)', flexWrap: 'wrap' }}>
           {TABS.map(t => (
             <button
               key={t.key}
@@ -285,7 +285,7 @@ const ProvidersPage: React.FC = () => {
               style={{
                 padding: '7px 16px', borderRadius: '7px', border: 'none',
                 background: activeTab === t.key ? (t.color ?? '#00674F') : 'transparent',
-                color: activeTab === t.key ? '#fff' : '#878787',
+                color: activeTab === t.key ? '#fff' : 'var(--text-secondary)',
                 fontWeight: activeTab === t.key ? 600 : 400,
                 fontSize: '13px', cursor: 'pointer', transition: 'all 0.15s',
                 boxShadow: activeTab === t.key ? `0 2px 10px ${t.color ?? '#00674F'}40` : 'none',
@@ -309,7 +309,7 @@ const ProvidersPage: React.FC = () => {
         {/* Search */}
         <div style={{ position: 'relative' }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="15" height="15"
-            style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#4a6b5e' }}>
+            style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
           <input
@@ -318,8 +318,8 @@ const ProvidersPage: React.FC = () => {
             placeholder="Search providers…"
             style={{
               padding: '9px 14px 9px 36px',
-              background: '#0a1a15', border: '1px solid #1e3d30',
-              borderRadius: '10px', color: '#e8f5f0', fontSize: '13px', width: '220px',
+              background: 'var(--input-bg)', border: '1px solid var(--border)',
+              borderRadius: '10px', color: 'var(--text-primary)', fontSize: '13px', width: '220px',
             }}
           />
         </div>
@@ -327,11 +327,11 @@ const ProvidersPage: React.FC = () => {
 
       {/* ── Table ── */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px', color: '#4a6b5e' }}>Loading providers…</div>
+        <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>Loading providers…</div>
       ) : (
-        <div style={{ background: '#122b22', border: '1px solid #1e3d30', borderRadius: '12px', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
           {/* Header */}
-          <div style={{ display: 'flex', padding: '12px 16px', borderBottom: '1px solid #1e3d30', background: '#0d241c' }}>
+          <div style={{ display: 'flex', padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface-raised)' }}>
             {[
               { label: 'Provider Name', flex: 1.5 },
               { label: 'Company', flex: 1.2 },
@@ -341,18 +341,18 @@ const ProvidersPage: React.FC = () => {
               { label: 'Online', flex: 0.7 },
               { label: 'Status', flex: 0.9 },
             ].map(c => (
-              <span key={c.label} style={{ flex: c.flex, fontSize: '11px', fontWeight: 700, color: '#878787', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <span key={c.label} style={{ flex: c.flex, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 {c.label}
               </span>
             ))}
-            <span style={{ width: '160px', fontSize: '11px', fontWeight: 700, color: '#878787', textTransform: 'uppercase', textAlign: 'right' }}>
+            <span style={{ width: '160px', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', textAlign: 'right' }}>
               Actions
             </span>
           </div>
 
           {/* Rows */}
           {providers.length === 0 ? (
-            <div style={{ padding: '60px', textAlign: 'center', color: '#4a6b5e', fontSize: '14px' }}>
+            <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
               {search ? 'No providers match your search.' : 'No providers found in this category.'}
             </div>
           ) : (
@@ -364,7 +364,7 @@ const ProvidersPage: React.FC = () => {
                   borderBottom: i < providers.length - 1 ? '1px solid #1e3d3060' : 'none',
                   transition: 'background 0.12s', cursor: 'pointer',
                 }}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#183828'}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--table-row-hover)'}
                 onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
                 onClick={() => { setSelected(p); setDetailModal(true); }}
               >
@@ -378,18 +378,18 @@ const ProvidersPage: React.FC = () => {
                   }}>
                     {(p.first_name?.[0] ?? p.company_name?.[0] ?? '?').toUpperCase()}
                   </div>
-                  <span style={{ fontSize: '14px', color: '#e8f5f0', fontWeight: 500 }}>
+                  <span style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: 500 }}>
                     {providerDisplayName(p)}
                   </span>
                 </div>
-                <span style={{ flex: 1.2, fontSize: '13px', color: '#878787', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ flex: 1.2, fontSize: '13px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {p.company_name ?? '—'}
                 </span>
-                <span style={{ flex: 1.5, fontSize: '13px', color: '#878787', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ flex: 1.5, fontSize: '13px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {p.user_email ?? p.email ?? '—'}
                 </span>
-                <span style={{ flex: 1, fontSize: '13px', color: '#878787' }}>{p.phone ?? '—'}</span>
-                <span style={{ flex: 0.9, fontSize: '12px', color: '#4a6b5e' }}>
+                <span style={{ flex: 1, fontSize: '13px', color: 'var(--text-secondary)' }}>{p.phone ?? '—'}</span>
+                <span style={{ flex: 0.9, fontSize: '12px', color: 'var(--text-muted)' }}>
                   {new Date(p.created_at).toLocaleDateString()}
                 </span>
                 {/* Online/Offline pill */}
@@ -398,10 +398,10 @@ const ProvidersPage: React.FC = () => {
                     display: 'inline-flex', alignItems: 'center', gap: '5px',
                     padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700,
                     background: p.is_online ? '#00c89618' : '#4a6b5e18',
-                    color: p.is_online ? '#00c896' : '#4a6b5e',
+                    color: p.is_online ? '#00c896' : 'var(--text-muted)',
                     border: `1px solid ${p.is_online ? '#00c89640' : '#4a6b5e40'}`,
                   }}>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: p.is_online ? '#00c896' : '#4a6b5e', display: 'inline-block' }} />
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: p.is_online ? '#00c896' : 'var(--text-muted)', display: 'inline-block' }} />
                     {p.is_online ? 'Online' : 'Offline'}
                   </span>
                 </div>
@@ -417,8 +417,8 @@ const ProvidersPage: React.FC = () => {
                     style={{
                       padding: '6px 10px',
                       borderRadius: '6px',
-                      border: '1px solid #1e3d30',
-                      background: '#0a1a15',
+                      border: '1px solid var(--border)',
+                      background: 'var(--input-bg)',
                       color: '#00a87a',
                       fontWeight: 600,
                       fontSize: '11px',
@@ -433,8 +433,8 @@ const ProvidersPage: React.FC = () => {
                       e.currentTarget.style.borderColor = '#00674F';
                     }}
                     onMouseLeave={e => {
-                      e.currentTarget.style.background = '#0a1a15';
-                      e.currentTarget.style.borderColor = '#1e3d30';
+                      e.currentTarget.style.background = 'var(--input-bg)';
+                      e.currentTarget.style.borderColor = 'var(--border)';
                     }}
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="12" height="12">
@@ -511,7 +511,7 @@ const ProvidersPage: React.FC = () => {
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {/* Header profile card */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: '#0a1a15', borderRadius: '12px', border: '1px solid #1e3d30' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: 'var(--input-bg)', borderRadius: '12px', border: '1px solid var(--border)' }}>
               <div style={{
                 width: '54px', height: '54px', borderRadius: '50%',
                 background: '#00674F25', color: '#00a87a',
@@ -521,8 +521,8 @@ const ProvidersPage: React.FC = () => {
                 {(selected.first_name?.[0] ?? selected.company_name?.[0] ?? '?').toUpperCase()}
               </div>
               <div style={{ flex: 1 }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#e8f5f0' }}>{providerDisplayName(selected)}</h3>
-                <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#878787' }}>{selected.company_name || 'Individual'}</p>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>{providerDisplayName(selected)}</h3>
+                <p style={{ margin: '2px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>{selected.company_name || 'Individual'}</p>
               </div>
               <Badge variant={statusVariant(selected.approval_status)}>{selected.approval_status}</Badge>
             </div>
@@ -530,16 +530,16 @@ const ProvidersPage: React.FC = () => {
             {/* Info Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div style={{ padding: '12px', background: '#0d241c50', borderRadius: '10px', border: '1px solid #1e3d3030' }}>
-                <span style={{ fontSize: '11px', color: '#878787', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Email Address</span>
-                <span style={{ fontSize: '13px', color: '#e8f5f0', wordBreak: 'break-all' }}>{selected.user_email || selected.email || '—'}</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Email Address</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-primary)', wordBreak: 'break-all' }}>{selected.user_email || selected.email || '—'}</span>
               </div>
               <div style={{ padding: '12px', background: '#0d241c50', borderRadius: '10px', border: '1px solid #1e3d3030' }}>
-                <span style={{ fontSize: '11px', color: '#878787', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Phone Number</span>
-                <span style={{ fontSize: '13px', color: '#e8f5f0' }}>{selected.phone || '—'}</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Phone Number</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{selected.phone || '—'}</span>
               </div>
               <div style={{ gridColumn: 'span 2', padding: '12px', background: '#0d241c50', borderRadius: '10px', border: '1px solid #1e3d3030' }}>
-                <span style={{ fontSize: '11px', color: '#878787', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Registration Date</span>
-                <span style={{ fontSize: '13px', color: '#e8f5f0' }}>{new Date(selected.created_at).toLocaleString()}</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Registration Date</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{new Date(selected.created_at).toLocaleString()}</span>
               </div>
             </div>
 
@@ -553,14 +553,14 @@ const ProvidersPage: React.FC = () => {
                     if (!area) return null;
                     const city = citiesList.find(c => c.id === area.city_id);
                     return (
-                      <span key={aid} style={{ padding: '4px 10px', background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '6px', fontSize: '12px', color: '#e8f5f0' }}>
+                      <span key={aid} style={{ padding: '4px 10px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', color: 'var(--text-primary)' }}>
                         📍 {area.name} ({city ? city.name : 'Unknown City'})
                       </span>
                     );
                   })}
                 </div>
               ) : (
-                <span style={{ fontSize: '13px', color: '#878787', fontStyle: 'italic' }}>No service areas assigned.</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>No service areas assigned.</span>
               )}
             </div>
 
@@ -580,7 +580,7 @@ const ProvidersPage: React.FC = () => {
                   })}
                 </div>
               ) : (
-                <span style={{ fontSize: '13px', color: '#878787', fontStyle: 'italic' }}>No services selected.</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>No services selected.</span>
               )}
             </div>
           </div>
@@ -605,8 +605,8 @@ const ProvidersPage: React.FC = () => {
               disabled={submitting}
               style={{
                 padding: '10px 24px', borderRadius: '10px', border: 'none',
-                background: submitting ? '#1e3d30' : 'linear-gradient(135deg, #00674F, #00a87a)',
-                color: submitting ? '#4a6b5e' : '#fff',
+                background: submitting ? 'var(--border)' : 'linear-gradient(135deg, #00674F, #00a87a)',
+                color: submitting ? 'var(--text-muted)' : '#fff',
                 fontWeight: 700, fontSize: '13px',
                 cursor: submitting ? 'not-allowed' : 'pointer',
                 transition: 'all 0.15s',
@@ -651,7 +651,7 @@ const ProvidersPage: React.FC = () => {
             {/* Password */}
             <div>
               <label style={labelStyle}>
-                Password {editingProvider ? <span style={{ color: '#878787', textTransform: 'lowercase', fontSize: '11px', fontWeight: 'normal' }}>(leave blank to keep current)</span> : <span style={{ color: '#dc2626' }}>*</span>}
+                Password {editingProvider ? <span style={{ color: 'var(--text-secondary)', textTransform: 'lowercase', fontSize: '11px', fontWeight: 'normal' }}>(leave blank to keep current)</span> : <span style={{ color: '#dc2626' }}>*</span>}
               </label>
               <div style={{ position: 'relative' }}>
                 <input
@@ -666,7 +666,7 @@ const ProvidersPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(v => !v)}
-                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#4a6b5e', padding: 0 }}
+                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0 }}
                 >
                   {showPassword ? (
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="16" height="16">
@@ -685,7 +685,7 @@ const ProvidersPage: React.FC = () => {
             </div>
 
             {/* Location (City + Area) */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', borderTop: '1px solid #1e3d30', paddingTop: '14px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
               <div>
                 <label style={labelStyle}>City <span style={{ color: '#dc2626' }}>*</span></label>
                 <select
@@ -719,9 +719,9 @@ const ProvidersPage: React.FC = () => {
             </div>
 
             {/* Services checklist */}
-            <div style={{ borderTop: '1px solid #1e3d30', paddingTop: '14px', marginTop: '4px' }}>
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px', marginTop: '4px' }}>
               <label style={labelStyle}>Select Services / Skills</label>
-              <div style={{ maxHeight: '200px', overflowY: 'auto', background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ maxHeight: '200px', overflowY: 'auto', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {categories.map(cat => {
                   const catServices = services.filter(s => s.category_id === cat.id);
                   if (catServices.length === 0) return null;
@@ -734,7 +734,7 @@ const ProvidersPage: React.FC = () => {
                         {catServices.map(s => {
                           const isChecked = selectedServices.includes(s.id);
                           return (
-                            <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#e8f5f0' }}>
+                            <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-primary)' }}>
                               <input
                                 type="checkbox"
                                 checked={isChecked}

@@ -12,13 +12,22 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children?: React.ReactNode;
 }
 
-// ─── Variant styles ────────────────────────────────────────────────────
+// ─── Variant styles — uses CSS variables for theme awareness ────────────
 const VARIANT_STYLES: Record<BtnVariant, React.CSSProperties> = {
-  primary:   { background: '#00674F', color: '#fff',     border: '1px solid #00674F' },
-  secondary: { background: '#122b22', color: '#e8f5f0',  border: '1px solid #1e3d30' },
+  primary:   { background: '#00674F', color: '#fff', border: '1px solid #00674F' },
+  secondary: { background: 'var(--surface-raised)', color: 'var(--text-primary)', border: '1px solid var(--border)' },
   danger:    { background: '#dc262615', color: '#f87171', border: '1px solid #dc262640' },
-  ghost:     { background: 'transparent', color: '#878787', border: '1px solid transparent' },
+  ghost:     { background: 'transparent', color: 'var(--text-secondary)', border: '1px solid transparent' },
   outline:   { background: 'transparent', color: '#00674F', border: '1px solid #00674F' },
+};
+
+// ─── Hover backgrounds — theme-aware ────────────────────────────────────
+const HOVER_BG: Record<BtnVariant, string> = {
+  primary:   '#005240',
+  secondary: 'var(--surface-hover)',
+  danger:    '#dc262625',
+  ghost:     'var(--surface-hover)',
+  outline:   '#00674F15',
 };
 
 const SIZE_STYLES: Record<BtnSize, React.CSSProperties> = {
@@ -74,11 +83,7 @@ const Button: React.FC<ButtonProps> = ({
       }}
       onMouseEnter={(e) => {
         if (!isDisabled) {
-          if (variant === 'primary') (e.currentTarget as HTMLElement).style.background = '#005240';
-          if (variant === 'secondary') (e.currentTarget as HTMLElement).style.background = '#1d4535';
-          if (variant === 'danger') (e.currentTarget as HTMLElement).style.background = '#dc262625';
-          if (variant === 'ghost') (e.currentTarget as HTMLElement).style.background = '#122b22';
-          if (variant === 'outline') (e.currentTarget as HTMLElement).style.background = '#00674F15';
+          (e.currentTarget as HTMLElement).style.background = HOVER_BG[variant];
         }
         onMouseEnter?.(e);
       }}

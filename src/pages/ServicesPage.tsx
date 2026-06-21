@@ -9,18 +9,19 @@ import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
 import Table from '../components/ui/Table';
 import { toast } from '../components/ui/Toast';
+import ImageUploadWithCrop from '../components/ui/ImageUploadWithCrop';
 
 // ─── Shared styles ──────────────────────────────────────────────────────
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '10px 14px',
-  background: '#0a1a15', border: '1px solid #1e3d30',
-  borderRadius: '10px', color: '#e8f5f0', fontSize: '14px',
+  background: 'var(--input-bg)', border: '1px solid var(--border)',
+  borderRadius: '10px', color: 'var(--text-primary)', fontSize: '14px',
   boxSizing: 'border-box', transition: 'border-color 0.15s',
   fontFamily: 'Inter, sans-serif',
 };
 const labelStyle: React.CSSProperties = {
   display: 'block', fontSize: '12px', fontWeight: 600,
-  color: '#878787', marginBottom: '6px',
+  color: 'var(--text-secondary)', marginBottom: '6px',
   textTransform: 'uppercase', letterSpacing: '0.5px',
 };
 const tabBtnStyle: React.CSSProperties = {
@@ -102,7 +103,7 @@ const BulletListEditor: React.FC<{
         </button>
       </div>
       {items.length === 0 && (
-        <p style={{ color: '#4a6b5e', fontSize: '13px', margin: 0 }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>
           No items yet — click <strong>+ Add</strong> to add a point.
         </p>
       )}
@@ -139,10 +140,10 @@ const BulletListEditor: React.FC<{
 // Section divider moved to end of components
 const Divider: React.FC<{ label: string }> = ({ label }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '4px 0 16px' }}>
-    <span style={{ fontSize: '11px', fontWeight: 700, color: '#4a6b5e', textTransform: 'uppercase', letterSpacing: '1px', whiteSpace: 'nowrap' }}>
+    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', whiteSpace: 'nowrap' }}>
       {label}
     </span>
-    <div style={{ flex: 1, height: '1px', background: '#1e3d30' }} />
+    <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
   </div>
 );
 
@@ -443,11 +444,18 @@ const ServicesPage: React.FC = () => {
     finally { setSvcSaving(false); }
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setSvcImageFile(e.target.files[0]);
-      setSvcImagePreview(URL.createObjectURL(e.target.files[0]));
-    }
+  // image ready callbacks
+  const handleParentCatImageReady = (file: File, preview: string) => {
+    setParentCatImageFile(file);
+    setParentCatImagePreview(preview);
+  };
+  const handleCatImageReady = (file: File, preview: string) => {
+    setCatImageFile(file);
+    setCatImagePreview(preview);
+  };
+  const handleSvcImageReady = (file: File, preview: string) => {
+    setSvcImageFile(file);
+    setSvcImagePreview(preview);
   };
 
   const confirmDelete = (item: any, type: 'parent_category' | 'category' | 'service') => {
@@ -481,9 +489,9 @@ const ServicesPage: React.FC = () => {
 
   return (
     <div style={{ animation: 'fadeIn 0.25s ease-out' }}>
-      <div style={{ display: 'flex', gap: '16px', borderBottom: '1px solid #1e3d30', marginBottom: '24px', overflowX: 'auto' }}>
+      <div style={{ display: 'flex', gap: '16px', borderBottom: '1px solid var(--border)', marginBottom: '24px', overflowX: 'auto' }}>
         {['parent_categories', 'categories', 'services'].map(t => (
-          <button key={t} onClick={() => setTab(t as any)} style={{ ...tabBtnStyle, borderBottom: tab === t ? '3px solid #00674F' : '3px solid transparent', color: tab === t ? '#e8f5f0' : '#878787' }}>
+          <button key={t} onClick={() => setTab(t as any)} style={{ ...tabBtnStyle, borderBottom: tab === t ? '3px solid #00674F' : '3px solid transparent', color: tab === t ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
             {t.replace('_', ' ').toUpperCase()}
           </button>
         ))}
@@ -492,13 +500,13 @@ const ServicesPage: React.FC = () => {
       {tab === 'parent_categories' && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', alignItems: 'center' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#e8f5f0', margin: 0 }}>Parent Categories</h2>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Parent Categories</h2>
             <button onClick={openAddParentCat} style={btnPrimary}>+ Add Parent Category</button>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
             <div style={{ position: 'relative', width: '260px' }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="15" height="15"
-                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#4a6b5e' }}>
+                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
               <input
@@ -507,8 +515,8 @@ const ServicesPage: React.FC = () => {
                 placeholder="Search parent categories…"
                 style={{
                   padding: '9px 14px 9px 36px',
-                  background: '#0a1a15', border: '1px solid #1e3d30',
-                  borderRadius: '10px', color: '#e8f5f0', fontSize: '13px', width: '100%',
+                  background: 'var(--input-bg)', border: '1px solid var(--border)',
+                  borderRadius: '10px', color: 'var(--text-primary)', fontSize: '13px', width: '100%',
                   boxSizing: 'border-box'
                 }}
               />
@@ -533,13 +541,13 @@ const ServicesPage: React.FC = () => {
       {tab === 'categories' && (
         <div className="animate-fade-in">
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', alignItems: 'center' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#e8f5f0', margin: 0 }}>Sub Categories</h2>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Sub Categories</h2>
             <button onClick={openAddCat} style={btnPrimary}>+ Add Sub Category</button>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
             <div style={{ position: 'relative', width: '260px' }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="15" height="15"
-                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#4a6b5e' }}>
+                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
               <input
@@ -548,14 +556,14 @@ const ServicesPage: React.FC = () => {
                 placeholder="Search sub categories…"
                 style={{
                   padding: '9px 14px 9px 36px',
-                  background: '#0a1a15', border: '1px solid #1e3d30',
-                  borderRadius: '10px', color: '#e8f5f0', fontSize: '13px', width: '100%',
+                  background: 'var(--input-bg)', border: '1px solid var(--border)',
+                  borderRadius: '10px', color: 'var(--text-primary)', fontSize: '13px', width: '100%',
                   boxSizing: 'border-box'
                 }}
               />
             </div>
           </div>
-          {loading ? ( <div style={{ color: '#878787', padding: '40px', textAlign: 'center' }}>Loading...</div> ) : (
+          {loading ? ( <div style={{ color: 'var(--text-secondary)', padding: '40px', textAlign: 'center' }}>Loading...</div> ) : (
             <Table
               columns={[
                 { key: 'name', label: 'Name' },
@@ -583,13 +591,13 @@ const ServicesPage: React.FC = () => {
       {tab === 'services' && (
         <div className="animate-fade-in">
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', alignItems: 'center' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#e8f5f0', margin: 0 }}>Services</h2>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Services</h2>
             <button onClick={openAddSvc} style={btnPrimary}>+ Add Service</button>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
             <div style={{ position: 'relative', width: '260px' }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="15" height="15"
-                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#4a6b5e' }}>
+                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
               <input
@@ -598,26 +606,44 @@ const ServicesPage: React.FC = () => {
                 placeholder="Search services…"
                 style={{
                   padding: '9px 14px 9px 36px',
-                  background: '#0a1a15', border: '1px solid #1e3d30',
-                  borderRadius: '10px', color: '#e8f5f0', fontSize: '13px', width: '100%',
+                  background: 'var(--input-bg)', border: '1px solid var(--border)',
+                  borderRadius: '10px', color: 'var(--text-primary)', fontSize: '13px', width: '100%',
                   boxSizing: 'border-box'
                 }}
               />
             </div>
           </div>
-          {svcLoading ? ( <div style={{ color: '#878787', padding: '40px', textAlign: 'center' }}>Loading...</div> ) : (
+          {svcLoading ? ( <div style={{ color: 'var(--text-secondary)', padding: '40px', textAlign: 'center' }}>Loading...</div> ) : (
             <Table
               columns={[
                 { key: 'name', label: 'Service Name' },
                 { key: 'parent_cat_fmt', label: 'Parent Cat' },
                 { key: 'category_name', label: 'Sub Category' },
-                { key: 'base_price_fmt', label: 'Base Price' }
+                { key: 'base_price_fmt', label: 'Base Price' },
+                { key: 'is_top_service_checkbox', label: 'Top Service' }
               ]}
               rows={services.map(s => ({
                 ...s,
                 parent_cat_fmt: parentCatName_lookup(s.parent_category_id),
                 category_name: catName_lookup(s.category_id),
-                base_price_fmt: `PKR ${Number(s.base_price).toLocaleString()}`
+                base_price_fmt: `PKR ${Number(s.base_price).toLocaleString()}`,
+                is_top_service_checkbox: (
+                  <input
+                    type="checkbox"
+                    checked={s.is_top_service ?? false}
+                    onChange={async (e) => {
+                      const checked = e.target.checked;
+                      try {
+                        await updateService(s.id, { is_top_service: checked });
+                        setServices(prev => prev.map(item => item.id === s.id ? { ...item, is_top_service: checked } : item));
+                        toast('Service status updated successfully');
+                      } catch (err: any) {
+                        toast(err?.response?.data?.error || 'Failed to update service status', 'error');
+                      }
+                    }}
+                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                  />
+                )
               }))}
               onEdit={openEditSvc}
               onDelete={r => confirmDelete(r, 'service')}
@@ -648,26 +674,15 @@ const ServicesPage: React.FC = () => {
       >
         <Input label="Parent Category Name" value={parentCatName} onChange={setParentCatName} placeholder="e.g. Home Maintenance" required />
         <Textarea label="Description (optional)" value={parentCatDesc} onChange={setParentCatDesc} placeholder="Describe this parent category…" />
-        
-        <div style={{ marginBottom: '16px' }}>
-          <label style={labelStyle}>Category Image <span style={{ color: '#dc2626' }}>*</span></label>
-          {parentCatImagePreview && (
-            <div style={{ marginBottom: '8px' }}>
-              <img src={parentCatImagePreview} alt="Preview" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #1e3d30' }} />
-            </div>
-          )}
-          <input 
-            type="file" 
-            accept="image/*" 
-            onChange={(e) => {
-              if (e.target.files && e.target.files[0]) {
-                setParentCatImageFile(e.target.files[0]);
-                setParentCatImagePreview(URL.createObjectURL(e.target.files[0]));
-              }
-            }} 
-            style={{ ...inputStyle, padding: '8px' }}
-          />
-        </div>
+        <ImageUploadWithCrop
+          label="Category Image"
+          currentPreview={parentCatImagePreview}
+          onFileReady={handleParentCatImageReady}
+          required
+          maxMB={5}
+          quality={0.85}
+          maxDim={1200}
+        />
       </Modal>
 
       {/* ── Sub Category Modal ── */}
@@ -692,7 +707,7 @@ const ServicesPage: React.FC = () => {
           <select
             value={catParentCatId}
             onChange={e => setCatParentCatId(e.target.value)}
-            style={{ ...inputStyle, color: catParentCatId ? '#e8f5f0' : '#4a6b5e' }}
+            style={{ ...inputStyle, color: catParentCatId ? 'var(--text-primary)' : 'var(--text-muted)' }}
           >
             <option value="">Select a parent…</option>
             {allParentCategories.map(pc => (
@@ -703,26 +718,14 @@ const ServicesPage: React.FC = () => {
 
         <Textarea label="Short Description (optional)" value={catDesc} onChange={setCatDesc} placeholder="Describe this category briefly…" />
         <Textarea label="Long Description" value={catLongDesc} onChange={setCatLongDesc} placeholder="Detailed description for the subcategory page…" rows={5} />
-        
-        <div style={{ marginBottom: '16px' }}>
-          <label style={labelStyle}>Sub Category Image <span style={{ color: '#dc2626' }}>*</span></label>
-          {catImagePreview && (
-            <div style={{ marginBottom: '8px' }}>
-              <img src={catImagePreview} alt="Preview" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #1e3d30' }} />
-            </div>
-          )}
-          <input 
-            type="file" 
-            accept="image/*" 
-            onChange={(e) => {
-              if (e.target.files && e.target.files[0]) {
-                setCatImageFile(e.target.files[0]);
-                setCatImagePreview(URL.createObjectURL(e.target.files[0]));
-              }
-            }} 
-            style={{ ...inputStyle, padding: '8px' }}
-          />
-        </div>
+        <ImageUploadWithCrop
+          label="Sub Category Image"
+          currentPreview={catImagePreview}
+          onFileReady={handleCatImageReady}
+          required
+          maxMB={3}
+          disableCompress
+        />
       </Modal>
 
       {/* ── Service Modal ── */}
@@ -758,7 +761,7 @@ const ServicesPage: React.FC = () => {
                   setSvcCatId('');
                 }
               }}
-              style={{ ...inputStyle, color: svcParentCatId ? '#e8f5f0' : '#4a6b5e' }}
+              style={{ ...inputStyle, color: svcParentCatId ? 'var(--text-primary)' : 'var(--text-muted)' }}
             >
               <option value="">Select a parent…</option>
               {allParentCategories.map(pc => (
@@ -775,7 +778,7 @@ const ServicesPage: React.FC = () => {
             <select
               value={svcCatId}
               onChange={e => setSvcCatId(e.target.value)}
-              style={{ ...inputStyle, color: svcCatId ? '#e8f5f0' : '#4a6b5e' }}
+              style={{ ...inputStyle, color: svcCatId ? 'var(--text-primary)' : 'var(--text-muted)' }}
               disabled={!svcParentCatId}
             >
               <option value="">Select a sub category…</option>
@@ -791,23 +794,17 @@ const ServicesPage: React.FC = () => {
         <Textarea label="Full Description (optional)" value={svcDesc}     onChange={setSvcDesc}      placeholder="Detailed description of the service…" rows={4} />
 
         {/* ── Image Upload ── */}
-        <div style={{ marginBottom: '16px' }}>
-          <label style={labelStyle}>Service Image</label>
-          {svcImagePreview && (
-            <div style={{ marginBottom: '8px' }}>
-              <img src={svcImagePreview} alt="Preview" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #1e3d30' }} />
-            </div>
-          )}
-          <input 
-            type="file" 
-            accept="image/*" 
-            onChange={handleImageChange} 
-            style={{ ...inputStyle, padding: '8px' }}
-          />
-        </div>
+        <ImageUploadWithCrop
+          label="Service Image"
+          currentPreview={svcImagePreview}
+          onFileReady={handleSvcImageReady}
+          maxMB={3}
+          quality={0.80}
+          maxDim={900}
+        />
 
         {/* ── Top Service Checkbox ── */}
-        <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', background: '#0a1a15', padding: '12px', borderRadius: '10px', border: '1px solid #1e3d30' }}>
+        <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--input-bg)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)' }}>
           <input 
             type="checkbox" 
             id="isTopService" 
@@ -815,13 +812,13 @@ const ServicesPage: React.FC = () => {
             onChange={(e) => setSvcIsTop(e.target.checked)}
             style={{ width: '18px', height: '18px', accentColor: '#00674F', cursor: 'pointer' }}
           />
-          <label htmlFor="isTopService" style={{ fontSize: '13px', fontWeight: 600, color: '#e8f5f0', cursor: 'pointer', marginBottom: 0 }}>
+          <label htmlFor="isTopService" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer', marginBottom: 0 }}>
             Mark as Top Service
           </label>
         </div>
 
         {/* ── Repair Checkbox ── */}
-        <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', background: '#0a1a15', padding: '12px', borderRadius: '10px', border: '1px solid #1e3d30' }}>
+        <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--input-bg)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)' }}>
           <input 
             type="checkbox" 
             id="canBeRepaired" 
@@ -830,10 +827,10 @@ const ServicesPage: React.FC = () => {
             style={{ width: '18px', height: '18px', accentColor: '#e67e22', cursor: 'pointer' }}
           />
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <label htmlFor="canBeRepaired" style={{ fontSize: '13px', fontWeight: 600, color: '#e8f5f0', cursor: 'pointer', marginBottom: 0 }}>
+            <label htmlFor="canBeRepaired" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer', marginBottom: 0 }}>
               🔧 Allow Repair Status
             </label>
-            <span style={{ fontSize: '11px', color: '#4a6b5e' }}>Provider can put this service's order into "Repair" mode (max 24h)</span>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Provider can put this service's order into "Repair" mode (max 24h)</span>
           </div>
         </div>
 
@@ -876,10 +873,10 @@ const ServicesPage: React.FC = () => {
           </div>
         }
       >
-        <p style={{ color: '#e8f5f0', margin: 0, fontSize: '14px' }}>
+        <p style={{ color: 'var(--text-primary)', margin: 0, fontSize: '14px' }}>
           Are you sure you want to delete <strong style={{ color: '#f87171' }}>{deleteTarget?.name}</strong>?
           {deleteType === 'category' && (
-            <span style={{ color: '#878787', display: 'block', marginTop: '8px', fontSize: '13px' }}>
+            <span style={{ color: 'var(--text-secondary)', display: 'block', marginTop: '8px', fontSize: '13px' }}>
               This will also delete all services in this category.
             </span>
           )}

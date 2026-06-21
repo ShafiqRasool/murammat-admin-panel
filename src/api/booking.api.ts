@@ -51,6 +51,10 @@ export const assignBooking = (id: string, provider_id: string) =>
 export const cancelBooking = (id: string) =>
   api.patch(`/admin/bookings/${id}/cancel`).then(r => r.data);
 
+export const updateBookingStatus = (id: string, status: string) =>
+  api.patch(`/admin/bookings/${id}/status`, { status }).then(r => r.data);
+
+
 export interface CreateAdminBookingPayload {
   customer_id?: string; // Optional if manual_customer is provided
   manual_customer?: {

@@ -25,7 +25,7 @@ const Input: React.FC<{
   required?: boolean;
 }> = ({ label, type = 'text', value, onChange, placeholder, required }) => (
   <div style={{ marginBottom: '16px' }}>
-    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#878787', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
       {label}{required && <span style={{ color: '#dc2626', marginLeft: '2px' }}>*</span>}
     </label>
     <input
@@ -36,10 +36,10 @@ const Input: React.FC<{
       style={{
         width: '100%',
         padding: '10px 14px',
-        background: '#0a1a15',
-        border: '1px solid #1e3d30',
+        background: 'var(--input-bg)',
+        border: '1px solid var(--border)',
         borderRadius: '10px',
-        color: '#e8f5f0',
+        color: 'var(--text-primary)',
         fontSize: '14px',
         boxSizing: 'border-box',
       }}
@@ -257,12 +257,12 @@ const CommissionsPage: React.FC = () => {
     <div style={{ animation: 'fadeIn 0.25s ease-out', padding: '24px' }}>
       {/* --- Heading Banner --- */}
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#e8f5f0', margin: 0 }}>Commissions & Wallets</h1>
-        <p style={{ margin: '4px 0 0', color: '#878787', fontSize: '13px' }}>Verify partner payments and manage commission rates & locking thresholds</p>
+        <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Commissions & Wallets</h1>
+        <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: '13px' }}>Verify partner payments and manage commission rates & locking thresholds</p>
       </div>
 
       {/* --- Tabs --- */}
-      <div style={{ display: 'flex', gap: '6px', background: '#0a1a15', padding: '5px', borderRadius: '10px', border: '1px solid #1e3d30', width: 'fit-content', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', gap: '6px', background: 'var(--input-bg)', padding: '5px', borderRadius: '10px', border: '1px solid var(--border)', width: 'fit-content', marginBottom: '24px' }}>
         <Tab label="Pending Approvals" active={tab === 'pending'} onClick={() => setTab('pending')} />
         <Tab label="Provider Limits & Settings" active={tab === 'providers'} onClick={() => setTab('providers')} />
       </div>
@@ -273,7 +273,7 @@ const CommissionsPage: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
             <div style={{ position: 'relative', width: '260px' }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="15" height="15"
-                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#4a6b5e' }}>
+                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
               <input
@@ -282,39 +282,39 @@ const CommissionsPage: React.FC = () => {
                 placeholder="Search pending payments…"
                 style={{
                   padding: '9px 14px 9px 36px',
-                  background: '#0a1a15', border: '1px solid #1e3d30',
-                  borderRadius: '10px', color: '#e8f5f0', fontSize: '13px', width: '100%',
+                  background: 'var(--input-bg)', border: '1px solid var(--border)',
+                  borderRadius: '10px', color: 'var(--text-primary)', fontSize: '13px', width: '100%',
                   boxSizing: 'border-box'
                 }}
               />
             </div>
           </div>
           {pendingLoading ? (
-            <div style={{ textAlign: 'center', padding: '60px', color: '#4a6b5e' }}>Loading payments list…</div>
+            <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>Loading payments list…</div>
           ) : (
-            <div style={{ background: '#122b22', border: '1px solid #1e3d30', borderRadius: '12px', overflow: 'hidden' }}>
-              <div style={{ display: 'flex', padding: '12px 16px', borderBottom: '1px solid #1e3d30', background: '#0d241c' }}>
-                <span style={{ flex: 1.2, fontSize: '11px', fontWeight: 700, color: '#878787', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Provider / Company</span>
-                <span style={{ flex: 0.8, fontSize: '11px', fontWeight: 700, color: '#878787', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Amount</span>
-                <span style={{ flex: 1.2, fontSize: '11px', fontWeight: 700, color: '#878787', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TID (JazzCash)</span>
-                <span style={{ flex: 1, fontSize: '11px', fontWeight: 700, color: '#878787', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Submitted At</span>
-                <span style={{ width: '220px', fontSize: '11px', fontWeight: 700, color: '#878787', textTransform: 'uppercase', textAlign: 'right' }}>Actions</span>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface-raised)' }}>
+                <span style={{ flex: 1.2, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Provider / Company</span>
+                <span style={{ flex: 0.8, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Amount</span>
+                <span style={{ flex: 1.2, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TID (JazzCash)</span>
+                <span style={{ flex: 1, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Submitted At</span>
+                <span style={{ width: '220px', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', textAlign: 'right' }}>Actions</span>
               </div>
               {pendingPayments.length === 0 ? (
-                <div style={{ padding: '40px', textAlign: 'center', color: '#4a6b5e', fontSize: '14px' }}>No pending approvals found.</div>
+                <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>No pending approvals found.</div>
               ) : (
                 pendingPayments.map((row, i) => (
                   <div
                     key={row.id}
                     style={{ display: 'flex', alignItems: 'center', padding: '13px 16px', borderBottom: i < pendingPayments.length - 1 ? '1px solid #1e3d3060' : 'none' }}
                   >
-                    <span style={{ flex: 1.2, fontSize: '14px', color: '#e8f5f0', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span style={{ flex: 1.2, fontSize: '14px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       <div style={{ fontWeight: 600 }}>{row.company_name}</div>
-                      <div style={{ fontSize: '12px', color: '#878787' }}>{row.first_name} {row.last_name} ({row.provider_phone})</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{row.first_name} {row.last_name} ({row.provider_phone})</div>
                     </span>
                     <span style={{ flex: 0.8, fontSize: '14px', color: '#10b981', fontWeight: 600 }}>PKR {parseFloat(row.amount).toLocaleString()}</span>
                     <span style={{ flex: 1.2, fontSize: '14px', color: '#3b82f6', fontWeight: 600 }}>{row.tid}</span>
-                    <span style={{ flex: 1, fontSize: '13px', color: '#878787' }}>{new Date(row.created_at).toLocaleDateString()}</span>
+                    <span style={{ flex: 1, fontSize: '13px', color: 'var(--text-secondary)' }}>{new Date(row.created_at).toLocaleDateString()}</span>
                     <div style={{ width: '220px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                       <Button variant="secondary" size="sm" onClick={() => handleViewDetails(row.provider_id)}>View</Button>
                       <Button variant="primary" size="sm" onClick={() => handleApprove(row.id)}>Approve</Button>
@@ -341,7 +341,7 @@ const CommissionsPage: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
             <div style={{ position: 'relative', width: '260px' }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="15" height="15"
-                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#4a6b5e' }}>
+                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
               <input
@@ -350,27 +350,27 @@ const CommissionsPage: React.FC = () => {
                 placeholder="Search providers…"
                 style={{
                   padding: '9px 14px 9px 36px',
-                  background: '#0a1a15', border: '1px solid #1e3d30',
-                  borderRadius: '10px', color: '#e8f5f0', fontSize: '13px', width: '100%',
+                  background: 'var(--input-bg)', border: '1px solid var(--border)',
+                  borderRadius: '10px', color: 'var(--text-primary)', fontSize: '13px', width: '100%',
                   boxSizing: 'border-box'
                 }}
               />
             </div>
           </div>
           {providersLoading ? (
-            <div style={{ textAlign: 'center', padding: '60px', color: '#4a6b5e' }}>Loading providers…</div>
+            <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>Loading providers…</div>
           ) : (
-            <div style={{ background: '#122b22', border: '1px solid #1e3d30', borderRadius: '12px', overflow: 'hidden' }}>
-              <div style={{ display: 'flex', padding: '12px 16px', borderBottom: '1px solid #1e3d30', background: '#0d241c' }}>
-                <span style={{ flex: 1.2, fontSize: '11px', fontWeight: 700, color: '#878787', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Provider / Company</span>
-                <span style={{ flex: 0.8, fontSize: '11px', fontWeight: 700, color: '#878787', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Wallet Balance</span>
-                <span style={{ flex: 0.6, fontSize: '11px', fontWeight: 700, color: '#878787', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Comm. Rate</span>
-                <span style={{ flex: 0.8, fontSize: '11px', fontWeight: 700, color: '#878787', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Threshold Limit</span>
-                <span style={{ flex: 0.8, fontSize: '11px', fontWeight: 700, color: '#878787', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</span>
-                <span style={{ width: '180px', fontSize: '11px', fontWeight: 700, color: '#878787', textTransform: 'uppercase', textAlign: 'right' }}>Actions</span>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface-raised)' }}>
+                <span style={{ flex: 1.2, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Provider / Company</span>
+                <span style={{ flex: 0.8, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Wallet Balance</span>
+                <span style={{ flex: 0.6, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Comm. Rate</span>
+                <span style={{ flex: 0.8, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Threshold Limit</span>
+                <span style={{ flex: 0.8, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</span>
+                <span style={{ width: '180px', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', textAlign: 'right' }}>Actions</span>
               </div>
               {providersSettings.length === 0 ? (
-                <div style={{ padding: '40px', textAlign: 'center', color: '#4a6b5e', fontSize: '14px' }}>No providers registered yet.</div>
+                <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>No providers registered yet.</div>
               ) : (
                 providersSettings.map((row, i) => {
                   const balance = parseFloat(row.wallet_balance);
@@ -380,17 +380,17 @@ const CommissionsPage: React.FC = () => {
                       key={row.provider_id}
                       style={{ display: 'flex', alignItems: 'center', padding: '13px 16px', borderBottom: i < providersSettings.length - 1 ? '1px solid #1e3d3060' : 'none' }}
                     >
-                      <span style={{ flex: 1.2, fontSize: '14px', color: '#e8f5f0', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <span style={{ flex: 1.2, fontSize: '14px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         <div style={{ fontWeight: 600 }}>{row.company_name}</div>
-                        <div style={{ fontSize: '12px', color: '#878787' }}>{row.first_name} {row.last_name}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{row.first_name} {row.last_name}</div>
                       </span>
                       <span style={{ flex: 0.8, fontSize: '14px', color: balance < 0 ? '#ef4444' : '#10b981', fontWeight: 600 }}>
                         PKR {balance.toLocaleString()}
                       </span>
-                      <span style={{ flex: 0.6, fontSize: '14px', color: '#e8f5f0' }}>
+                      <span style={{ flex: 0.6, fontSize: '14px', color: 'var(--text-primary)' }}>
                         {parseFloat(row.commission_rate)}%
                       </span>
-                      <span style={{ flex: 0.8, fontSize: '14px', color: '#e8f5f0' }}>
+                      <span style={{ flex: 0.8, fontSize: '14px', color: 'var(--text-primary)' }}>
                         PKR {parseFloat(row.commission_threshold).toLocaleString()}
                       </span>
                       <span style={{ flex: 0.8 }}>
@@ -463,11 +463,11 @@ const CommissionsPage: React.FC = () => {
         footer={<Button variant="ghost" onClick={() => setDetailModal(false)}>Close</Button>}
       >
         {loadingDetails ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#4a6b5e' }}>Loading details…</div>
+          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>Loading details…</div>
         ) : selectedProviderDetails ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {/* Header profile card */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: '#0a1a15', borderRadius: '12px', border: '1px solid #1e3d30' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: 'var(--input-bg)', borderRadius: '12px', border: '1px solid var(--border)' }}>
               <div style={{
                 width: '54px', height: '54px', borderRadius: '50%',
                 background: '#00674F25', color: '#00a87a',
@@ -477,10 +477,10 @@ const CommissionsPage: React.FC = () => {
                 {(selectedProviderDetails.first_name?.[0] ?? selectedProviderDetails.company_name?.[0] ?? '?').toUpperCase()}
               </div>
               <div style={{ flex: 1 }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#e8f5f0' }}>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>
                   {[selectedProviderDetails.first_name, selectedProviderDetails.last_name].filter(Boolean).join(' ') || selectedProviderDetails.company_name || selectedProviderDetails.email || '—'}
                 </h3>
-                <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#878787' }}>{selectedProviderDetails.company_name || 'Individual'}</p>
+                <p style={{ margin: '2px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>{selectedProviderDetails.company_name || 'Individual'}</p>
               </div>
               <Badge variant={statusVariant(selectedProviderDetails.approval_status)}>{selectedProviderDetails.approval_status}</Badge>
             </div>
@@ -488,16 +488,16 @@ const CommissionsPage: React.FC = () => {
             {/* Info Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div style={{ padding: '12px', background: '#0d241c50', borderRadius: '10px', border: '1px solid #1e3d3030' }}>
-                <span style={{ fontSize: '11px', color: '#878787', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Email Address</span>
-                <span style={{ fontSize: '13px', color: '#e8f5f0', wordBreak: 'break-all' }}>{selectedProviderDetails.user_email || selectedProviderDetails.email || '—'}</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Email Address</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-primary)', wordBreak: 'break-all' }}>{selectedProviderDetails.user_email || selectedProviderDetails.email || '—'}</span>
               </div>
               <div style={{ padding: '12px', background: '#0d241c50', borderRadius: '10px', border: '1px solid #1e3d3030' }}>
-                <span style={{ fontSize: '11px', color: '#878787', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Phone Number</span>
-                <span style={{ fontSize: '13px', color: '#e8f5f0' }}>{selectedProviderDetails.phone || '—'}</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Phone Number</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{selectedProviderDetails.phone || '—'}</span>
               </div>
               <div style={{ gridColumn: 'span 2', padding: '12px', background: '#0d241c50', borderRadius: '10px', border: '1px solid #1e3d3030' }}>
-                <span style={{ fontSize: '11px', color: '#878787', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Registration Date</span>
-                <span style={{ fontSize: '13px', color: '#e8f5f0' }}>{new Date(selectedProviderDetails.created_at).toLocaleString()}</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Registration Date</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{new Date(selectedProviderDetails.created_at).toLocaleString()}</span>
               </div>
             </div>
 
@@ -511,14 +511,14 @@ const CommissionsPage: React.FC = () => {
                     if (!area) return null;
                     const city = citiesList.find(c => c.id === area.city_id);
                     return (
-                      <span key={aid} style={{ padding: '4px 10px', background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '6px', fontSize: '12px', color: '#e8f5f0' }}>
+                      <span key={aid} style={{ padding: '4px 10px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', color: 'var(--text-primary)' }}>
                         📍 {area.name} ({city ? city.name : 'Unknown City'})
                       </span>
                     );
                   })}
                 </div>
               ) : (
-                <span style={{ fontSize: '13px', color: '#878787', fontStyle: 'italic' }}>No service areas assigned.</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>No service areas assigned.</span>
               )}
             </div>
 
@@ -538,12 +538,12 @@ const CommissionsPage: React.FC = () => {
                   })}
                 </div>
               ) : (
-                <span style={{ fontSize: '13px', color: '#878787', fontStyle: 'italic' }}>No services selected.</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>No services selected.</span>
               )}
             </div>
           </div>
         ) : (
-          <div style={{ textAlign: 'center', padding: '20px', color: '#878787' }}>No details available</div>
+          <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>No details available</div>
         )}
       </Modal>
     </div>

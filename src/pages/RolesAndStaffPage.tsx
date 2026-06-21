@@ -16,7 +16,7 @@ const Input: React.FC<{
   label: string; value: string; onChange: (v: string) => void; placeholder?: string; required?: boolean; type?: string;
 }> = ({ label, value, onChange, placeholder, required, type = 'text' }) => (
   <div style={{ marginBottom: '16px' }}>
-    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#878787', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
       {label}{required && <span style={{ color: '#dc2626', marginLeft: '2px' }}>*</span>}
     </label>
     <input
@@ -27,8 +27,8 @@ const Input: React.FC<{
       required={required}
       style={{
         width: '100%', padding: '10px 14px',
-        background: '#0a1a15', border: '1px solid #1e3d30',
-        borderRadius: '10px', color: '#e8f5f0', fontSize: '14px',
+        background: 'var(--input-bg)', border: '1px solid var(--border)',
+        borderRadius: '10px', color: 'var(--text-primary)', fontSize: '14px',
         boxSizing: 'border-box', transition: 'border-color 0.15s',
       }}
     />
@@ -51,21 +51,21 @@ const Table: React.FC<{
     onPageSizeChange: (size: number) => void;
   };
 }> = ({ columns, rows, onEdit, onDelete, actions, emptyText = 'No records found.', pagination }) => (
-  <div style={{ background: '#122b22', border: '1px solid #1e3d30', borderRadius: '12px', overflow: 'hidden' }}>
+  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
     {/* Header */}
-    <div style={{ display: 'flex', padding: '12px 16px', borderBottom: '1px solid #1e3d30', background: '#0d241c' }}>
+    <div style={{ display: 'flex', padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface-raised)' }}>
       {columns.map(c => (
-        <span key={c.key} style={{ flex: c.flex ?? 1, fontSize: '11px', fontWeight: 700, color: '#878787', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <span key={c.key} style={{ flex: c.flex ?? 1, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           {c.label}
         </span>
       ))}
-      <span style={{ width: '130px', fontSize: '11px', fontWeight: 700, color: '#878787', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'right' }}>
+      <span style={{ width: '130px', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'right' }}>
         Actions
       </span>
     </div>
     {/* Rows */}
     {rows.length === 0 ? (
-      <div style={{ padding: '40px', textAlign: 'center', color: '#4a6b5e', fontSize: '14px' }}>{emptyText}</div>
+      <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>{emptyText}</div>
     ) : (
       rows.map((row, i) => (
         <div
@@ -75,11 +75,11 @@ const Table: React.FC<{
             borderBottom: (i < rows.length - 1 || !!pagination) ? '1px solid #1e3d3060' : 'none',
             transition: 'background 0.12s',
           }}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#183828'}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--table-row-hover)'}
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
         >
           {columns.map(c => (
-            <span key={c.key} style={{ flex: c.flex ?? 1, fontSize: '14px', color: '#e8f5f0', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+            <span key={c.key} style={{ flex: c.flex ?? 1, fontSize: '14px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
               {Array.isArray(row[c.key]) ? row[c.key] : (row[c.key] ?? '—')}
             </span>
           ))}
@@ -376,7 +376,7 @@ const RolesAndStaffPage: React.FC = () => {
     <div style={{ animation: 'fadeIn 0.25s ease-out' }}>
       {/* ── Tabs Navigation ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
-        <div style={{ display: 'flex', gap: '6px', background: '#0a1a15', padding: '5px', borderRadius: '10px', border: '1px solid #1e3d30' }}>
+        <div style={{ display: 'flex', gap: '6px', background: 'var(--input-bg)', padding: '5px', borderRadius: '10px', border: '1px solid var(--border)' }}>
           <Tab label="Roles & Permissions" active={tab === 'roles'} onClick={() => setTab('roles')} />
           <Tab label="Staff Team Members" active={tab === 'staff'} onClick={() => setTab('staff')} />
         </div>
@@ -395,7 +395,7 @@ const RolesAndStaffPage: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
             <div style={{ position: 'relative', width: '260px' }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="15" height="15"
-                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#4a6b5e' }}>
+                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
               <input
@@ -404,15 +404,15 @@ const RolesAndStaffPage: React.FC = () => {
                 placeholder="Search roles…"
                 style={{
                   padding: '9px 14px 9px 36px',
-                  background: '#0a1a15', border: '1px solid #1e3d30',
-                  borderRadius: '10px', color: '#e8f5f0', fontSize: '13px', width: '100%',
+                  background: 'var(--input-bg)', border: '1px solid var(--border)',
+                  borderRadius: '10px', color: 'var(--text-primary)', fontSize: '13px', width: '100%',
                   boxSizing: 'border-box'
                 }}
               />
             </div>
           </div>
           {roleLoading ? (
-            <div style={{ textAlign: 'center', padding: '60px', color: '#4a6b5e' }}>Loading roles…</div>
+            <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>Loading roles…</div>
           ) : (
             <Table
               columns={[
@@ -424,7 +424,7 @@ const RolesAndStaffPage: React.FC = () => {
                 badge_list: (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '100%' }}>
                     {r.permissions.length === 0 ? (
-                      <span style={{ color: '#4a6b5e', fontSize: '12px' }}>None</span>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>None</span>
                     ) : (
                       r.permissions.map(p => (
                         <Badge key={p.id} variant="info">
@@ -462,7 +462,7 @@ const RolesAndStaffPage: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
             <div style={{ position: 'relative', width: '260px' }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="15" height="15"
-                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#4a6b5e' }}>
+                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
               <input
@@ -471,15 +471,15 @@ const RolesAndStaffPage: React.FC = () => {
                 placeholder="Search staff…"
                 style={{
                   padding: '9px 14px 9px 36px',
-                  background: '#0a1a15', border: '1px solid #1e3d30',
-                  borderRadius: '10px', color: '#e8f5f0', fontSize: '13px', width: '100%',
+                  background: 'var(--input-bg)', border: '1px solid var(--border)',
+                  borderRadius: '10px', color: 'var(--text-primary)', fontSize: '13px', width: '100%',
                   boxSizing: 'border-box'
                 }}
               />
             </div>
           </div>
           {staffLoading ? (
-            <div style={{ textAlign: 'center', padding: '60px', color: '#4a6b5e' }}>Loading staff list…</div>
+            <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>Loading staff list…</div>
           ) : (
             <Table
               columns={[
@@ -528,12 +528,12 @@ const RolesAndStaffPage: React.FC = () => {
         />
 
         <div style={{ marginTop: '20px' }}>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#878787', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             Check Access Permissions <span style={{ color: '#dc2626' }}>*</span>
           </label>
           <div style={{
-            maxHeight: '260px', overflowY: 'auto', background: '#0a1a15',
-            border: '1px solid #1e3d30', borderRadius: '10px', padding: '16px',
+            maxHeight: '260px', overflowY: 'auto', background: 'var(--input-bg)',
+            border: '1px solid var(--border)', borderRadius: '10px', padding: '16px',
             display: 'flex', flexDirection: 'column', gap: '12px'
           }}>
             {permissions.map(p => {
@@ -553,10 +553,10 @@ const RolesAndStaffPage: React.FC = () => {
                     }}
                   />
                   <div>
-                    <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#e8f5f0' }}>
+                    <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text-primary)' }}>
                       {p.name.replace('view_', 'view ').replace('_', ' ')}
                     </div>
-                    <div style={{ fontSize: '11px', color: '#878787' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
                       {p.description}
                     </div>
                   </div>
@@ -599,7 +599,7 @@ const RolesAndStaffPage: React.FC = () => {
         </div>
 
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#878787', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             Phone Number <span style={{ color: '#dc2626', marginLeft: '2px' }}>*</span>
           </label>
           <PhoneInput
@@ -626,7 +626,7 @@ const RolesAndStaffPage: React.FC = () => {
         />
 
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#878787', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             Assign Access Role <span style={{ color: '#dc2626' }}>*</span>
           </label>
           <select
@@ -634,8 +634,8 @@ const RolesAndStaffPage: React.FC = () => {
             onChange={e => setStaffForm(p => ({ ...p, role_id: e.target.value }))}
             style={{
               width: '100%', padding: '10px 14px',
-              background: '#0a1a15', border: '1px solid #1e3d30',
-              borderRadius: '10px', color: staffForm.role_id ? '#e8f5f0' : '#4a6b5e',
+              background: 'var(--input-bg)', border: '1px solid var(--border)',
+              borderRadius: '10px', color: staffForm.role_id ? 'var(--text-primary)' : 'var(--text-muted)',
               fontSize: '14px', boxSizing: 'border-box',
             }}
           >
@@ -659,9 +659,9 @@ const RolesAndStaffPage: React.FC = () => {
           </>
         }
       >
-        <p style={{ color: '#e8f5f0', margin: 0, fontSize: '14px' }}>
+        <p style={{ color: 'var(--text-primary)', margin: 0, fontSize: '14px' }}>
           Are you sure you want to delete <strong style={{ color: '#f87171' }}>{deleteTarget?.name || [deleteTarget?.first_name, deleteTarget?.last_name].filter(Boolean).join(' ') || deleteTarget?.phone}</strong>?
-          {deleteType === 'role' && <span style={{ color: '#878787', display: 'block', marginTop: '8px', fontSize: '13px' }}>This will remove access mappings for staff members with this role.</span>}
+          {deleteType === 'role' && <span style={{ color: 'var(--text-secondary)', display: 'block', marginTop: '8px', fontSize: '13px' }}>This will remove access mappings for staff members with this role.</span>}
         </p>
       </Modal>
     </div>

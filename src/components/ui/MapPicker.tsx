@@ -7,12 +7,6 @@ interface MapPickerProps {
   defaultCityCoordinates?: { lat: number; lng: number };
 }
 
-declare global {
-  interface Window {
-    L: any;
-  }
-}
-
 export const MapPicker: React.FC<MapPickerProps> = ({
   latitude,
   longitude,
@@ -22,40 +16,32 @@ export const MapPicker: React.FC<MapPickerProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markerInstanceRef = useRef<any>(null);
-  const [leafletLoaded, setLeafletLoaded] = useState(false);
+  const [googleLoaded, setGoogleLoaded] = useState(false);
 
-  // Load Leaflet CSS and JS dynamically from CDN
+  // Load Google Maps script dynamically
   useEffect(() => {
-    if (window.L) {
-      setLeafletLoaded(true);
+    if ((window as any).google && (window as any).google.maps) {
+      setGoogleLoaded(true);
       return;
     }
 
-    // 1. Inject CSS
-    const linkId = 'leaflet-cdn-css';
-    if (!document.getElementById(linkId)) {
-      const link = document.createElement('link');
-      link.id = linkId;
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      document.head.appendChild(link);
-    }
+    const scriptId = 'google-maps-script-admin';
+    let script = document.getElementById(scriptId) as HTMLScriptElement;
 
-    // 2. Inject JS
-    const scriptId = 'leaflet-cdn-js';
-    if (!document.getElementById(scriptId)) {
-      const script = document.createElement('script');
+    if (!script) {
+      script = document.createElement('script');
       script.id = scriptId;
-      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBKXixSZWYE5MqJlysVTO_rmi4Y-L_lFN8&libraries=places`;
+      script.async = true;
+      script.defer = true;
       script.onload = () => {
-        setLeafletLoaded(true);
+        setGoogleLoaded(true);
       };
       document.body.appendChild(script);
     } else {
-      // Script tag exists, wait for it to load
       const interval = setInterval(() => {
-        if (window.L) {
-          setLeafletLoaded(true);
+        if ((window as any).google && (window as any).google.maps) {
+          setGoogleLoaded(true);
           clearInterval(interval);
         }
       }, 100);
@@ -63,72 +49,78 @@ export const MapPicker: React.FC<MapPickerProps> = ({
     }
   }, []);
 
-  // Initialize and manage the Leaflet map
+  // Initialize map and marker
   useEffect(() => {
-    if (!leafletLoaded || !mapContainerRef.current) return;
+    if (!googleLoaded || !mapContainerRef.current) return;
 
-    const L = window.L;
-
-    // Use passed coordinates, default city coordinates, or fallback Lahore
+    const google = (window as any).google;
     const initialLat = latitude || defaultCityCoordinates?.lat || 31.5204;
     const initialLng = longitude || defaultCityCoordinates?.lng || 74.3587;
-
-    // Destroy existing map instance to prevent duplication
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.remove();
-      mapInstanceRef.current = null;
-      markerInstanceRef.current = null;
-    }
+    const initialCenter = { lat: initialLat, lng: initialLng };
 
     // Initialize Map
-    const map = L.map(mapContainerRef.current).setView([initialLat, initialLng], 13);
+    const map = new google.maps.Map(mapContainerRef.current, {
+      center: initialCenter,
+      zoom: 14,
+      disableDefaultUI: true,
+      zoomControl: true,
+    });
     mapInstanceRef.current = map;
 
-    // Add OpenStreetMap tiles
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
-    }).addTo(map);
-
-    // Initial Marker
-    const marker = L.marker([initialLat, initialLng], { draggable: true }).addTo(map);
+    // Initialize Marker
+    const marker = new google.maps.Marker({
+      position: initialCenter,
+      map: map,
+      draggable: true,
+    });
     markerInstanceRef.current = marker;
 
-    // Handle marker drag end
-    marker.on('dragend', () => {
-      const position = marker.getLatLng();
-      onChange(position.lat, position.lng);
-    });
-
-    // Handle map click
-    map.on('click', (e: any) => {
-      const { lat, lng } = e.latlng;
-      marker.setLatLng([lat, lng]);
-      onChange(lat, lng);
-    });
-
-    // Cleanup map instance on unmount
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-        markerInstanceRef.current = null;
+    // Marker drag end listener
+    marker.addListener('dragend', () => {
+      const pos = marker.getPosition();
+      if (pos) {
+        onChange(pos.lat(), pos.lng());
       }
-    };
-  }, [leafletLoaded]);
+    });
 
-  // Update marker position when latitude/longitude props change from outside
+    // Map click listener to relocate pin
+    map.addListener('click', (e: any) => {
+      if (e.latLng) {
+        marker.setPosition(e.latLng);
+        onChange(e.latLng.lat(), e.latLng.lng());
+      }
+    });
+
+    return () => {
+      if (google.maps.event) {
+        google.maps.event.clearInstanceListeners(marker);
+        google.maps.event.clearInstanceListeners(map);
+      }
+      mapInstanceRef.current = null;
+      markerInstanceRef.current = null;
+    };
+  }, [googleLoaded]);
+
+  // Update marker position from outside latitude/longitude changes
   useEffect(() => {
-    if (!leafletLoaded || !mapInstanceRef.current || !markerInstanceRef.current) return;
+    if (!googleLoaded || !mapInstanceRef.current || !markerInstanceRef.current) return;
 
     const currentLat = latitude || 31.5204;
     const currentLng = longitude || 74.3587;
 
-    const markerLatLng = markerInstanceRef.current.getLatLng();
-    if (markerLatLng.lat !== currentLat || markerLatLng.lng !== currentLng) {
-      markerInstanceRef.current.setLatLng([currentLat, currentLng]);
-      mapInstanceRef.current.panTo([currentLat, currentLng]);
+    const markerPosition = markerInstanceRef.current.getPosition();
+    if (markerPosition) {
+      const diffLat = Math.abs(markerPosition.lat() - currentLat);
+      const diffLng = Math.abs(markerPosition.lng() - currentLng);
+
+      // Pan/Move marker only if coordinates differ significantly
+      if (diffLat > 0.0001 || diffLng > 0.0001) {
+        const newPos = { lat: currentLat, lng: currentLng };
+        markerInstanceRef.current.setPosition(newPos);
+        mapInstanceRef.current.panTo(newPos);
+      }
     }
-  }, [latitude, longitude, leafletLoaded]);
+  }, [latitude, longitude, googleLoaded]);
 
   return (
     <div style={{ position: 'relative', width: '100%', marginBottom: '12px' }}>
@@ -138,12 +130,12 @@ export const MapPicker: React.FC<MapPickerProps> = ({
           height: '240px', 
           width: '100%', 
           borderRadius: '10px', 
-          border: '1px solid #1e3d30',
-          background: '#0a1a15',
+          border: '1px solid var(--border)',
+          background: 'var(--input-bg)',
           overflow: 'hidden'
         }} 
       />
-      {!leafletLoaded && (
+      {!googleLoaded && (
         <div style={{
           position: 'absolute',
           top: 0,
@@ -154,7 +146,7 @@ export const MapPicker: React.FC<MapPickerProps> = ({
           alignItems: 'center',
           justifyContent: 'center',
           background: 'rgba(10, 26, 21, 0.8)',
-          color: '#e8f5f0',
+          color: 'var(--text-primary)',
           borderRadius: '10px',
           fontSize: '13px'
         }}>

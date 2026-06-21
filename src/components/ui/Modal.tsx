@@ -45,7 +45,7 @@ const Modal: React.FC<ModalProps> = ({
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
       style={{
         position: 'fixed', inset: 0,
-        background: 'rgba(0, 0, 0, 0.7)',
+        background: 'rgba(0, 0, 0, 0.55)',
         backdropFilter: 'blur(4px)',
         display: 'flex',
         alignItems: 'center',
@@ -57,33 +57,33 @@ const Modal: React.FC<ModalProps> = ({
     >
       <div
         style={{
-          background: '#122b22',
-          border: '1px solid #1e3d30',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
           borderRadius: '16px',
           width: '100%',
           maxWidth: width,
           maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+          boxShadow: 'var(--shadow-card)',
           animation: 'modalIn 0.2s ease-out',
         }}
       >
         {/* ── Header ── */}
         <div style={{
           padding: '20px 24px',
-          borderBottom: '1px solid #1e3d30',
+          borderBottom: '1px solid var(--border)',
           display: 'flex',
           alignItems: 'flex-start',
           justifyContent: 'space-between',
           gap: '16px',
         }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#e8f5f0' }}>
+            <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>
               {title}
             </h2>
             {subtitle && (
-              <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#878787' }}>
+              <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
                 {subtitle}
               </p>
             )}
@@ -93,7 +93,7 @@ const Modal: React.FC<ModalProps> = ({
             style={{
               background: 'transparent',
               border: 'none',
-              color: '#878787',
+              color: 'var(--text-secondary)',
               cursor: 'pointer',
               padding: '2px',
               borderRadius: '6px',
@@ -104,11 +104,11 @@ const Modal: React.FC<ModalProps> = ({
               flexShrink: 0,
             }}
             onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.color = '#e8f5f0';
-              (e.currentTarget as HTMLElement).style.background = '#1e3d30';
+              (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)';
+              (e.currentTarget as HTMLElement).style.background = 'var(--surface-raised)';
             }}
             onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.color = '#878787';
+              (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)';
               (e.currentTarget as HTMLElement).style.background = 'transparent';
             }}
           >
@@ -128,7 +128,7 @@ const Modal: React.FC<ModalProps> = ({
         {footer && (
           <div style={{
             padding: '16px 24px',
-            borderTop: '1px solid #1e3d30',
+            borderTop: '1px solid var(--border)',
             display: 'flex',
             justifyContent: 'flex-end',
             gap: '10px',

@@ -14,7 +14,7 @@ const Input: React.FC<{
   label: string; value: string; onChange: (v: string) => void; placeholder?: string; required?: boolean;
 }> = ({ label, value, onChange, placeholder, required }) => (
   <div style={{ marginBottom: '16px' }}>
-    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#878787', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
       {label}{required && <span style={{ color: '#dc2626', marginLeft: '2px' }}>*</span>}
     </label>
     <input
@@ -23,8 +23,8 @@ const Input: React.FC<{
       placeholder={placeholder}
       style={{
         width: '100%', padding: '10px 14px',
-        background: '#0a1a15', border: '1px solid #1e3d30',
-        borderRadius: '10px', color: '#e8f5f0', fontSize: '14px',
+        background: 'var(--input-bg)', border: '1px solid var(--border)',
+        borderRadius: '10px', color: 'var(--text-primary)', fontSize: '14px',
         boxSizing: 'border-box', transition: 'border-color 0.15s',
       }}
     />
@@ -46,35 +46,35 @@ const Table: React.FC<{
     onPageSizeChange: (size: number) => void;
   };
 }> = ({ columns, rows, onEdit, onDelete, emptyText = 'No records found.', pagination }) => (
-  <div style={{ background: '#122b22', border: '1px solid #1e3d30', borderRadius: '12px', overflow: 'hidden' }}>
+  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
     {/* Header */}
-    <div style={{ display: 'flex', padding: '12px 16px', borderBottom: '1px solid #1e3d30', background: '#0d241c' }}>
+    <div style={{ display: 'flex', padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface-raised)' }}>
       {columns.map(c => (
-        <span key={c.key} style={{ flex: c.flex ?? 1, fontSize: '11px', fontWeight: 700, color: '#878787', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <span key={c.key} style={{ flex: c.flex ?? 1, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           {c.label}
         </span>
       ))}
-      <span style={{ width: '100px', fontSize: '11px', fontWeight: 700, color: '#878787', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'right' }}>
+      <span style={{ width: '100px', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'right' }}>
         Actions
       </span>
     </div>
     {/* Rows */}
     {rows.length === 0 ? (
-      <div style={{ padding: '40px', textAlign: 'center', color: '#4a6b5e', fontSize: '14px' }}>{emptyText}</div>
+      <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>{emptyText}</div>
     ) : (
       rows.map((row, i) => (
         <div
           key={row.id ?? i}
           style={{
             display: 'flex', alignItems: 'center', padding: '13px 16px',
-            borderBottom: (i < rows.length - 1 || !!pagination) ? '1px solid #1e3d3060' : 'none',
+            borderBottom: (i < rows.length - 1 || !!pagination) ? '1px solid var(--border)' : 'none',
             transition: 'background 0.12s',
           }}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#183828'}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--table-row-hover)'}
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
         >
           {columns.map(c => (
-            <span key={c.key} style={{ flex: c.flex ?? 1, fontSize: '14px', color: '#e8f5f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span key={c.key} style={{ flex: c.flex ?? 1, fontSize: '14px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {row[c.key] ?? '—'}
             </span>
           ))}
@@ -312,7 +312,7 @@ const LocationsPage: React.FC = () => {
     <div style={{ animation: 'fadeIn 0.25s ease-out' }}>
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-        <div style={{ display: 'flex', gap: '6px', background: '#0a1a15', padding: '5px', borderRadius: '10px', border: '1px solid #1e3d30' }}>
+        <div style={{ display: 'flex', gap: '6px', background: 'var(--input-bg)', padding: '5px', borderRadius: '10px', border: '1px solid var(--border)' }}>
           <Tab label="Cities" active={tab === 'cities'} onClick={() => setTab('cities')} />
           <Tab label="Areas" active={tab === 'areas'} onClick={() => setTab('areas')} />
         </div>
@@ -340,7 +340,7 @@ const LocationsPage: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
             <div style={{ position: 'relative', width: '260px' }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="15" height="15"
-                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#4a6b5e' }}>
+                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
               <input
@@ -349,15 +349,15 @@ const LocationsPage: React.FC = () => {
                 placeholder="Search cities…"
                 style={{
                   padding: '9px 14px 9px 36px',
-                  background: '#0a1a15', border: '1px solid #1e3d30',
-                  borderRadius: '10px', color: '#e8f5f0', fontSize: '13px', width: '100%',
+                  background: 'var(--input-bg)', border: '1px solid var(--border)',
+                  borderRadius: '10px', color: 'var(--text-primary)', fontSize: '13px', width: '100%',
                   boxSizing: 'border-box'
                 }}
               />
             </div>
           </div>
           {cityLoading ? (
-            <div style={{ textAlign: 'center', padding: '60px', color: '#4a6b5e' }}>Loading cities…</div>
+            <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>Loading cities…</div>
           ) : (
             <Table
               columns={[{ key: 'name', label: 'City Name' }, { key: 'created_at', label: 'Created', flex: 0.8 }]}
@@ -383,7 +383,7 @@ const LocationsPage: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
             <div style={{ position: 'relative', width: '260px' }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="15" height="15"
-                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#4a6b5e' }}>
+                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
               <input
@@ -392,15 +392,15 @@ const LocationsPage: React.FC = () => {
                 placeholder="Search areas…"
                 style={{
                   padding: '9px 14px 9px 36px',
-                  background: '#0a1a15', border: '1px solid #1e3d30',
-                  borderRadius: '10px', color: '#e8f5f0', fontSize: '13px', width: '100%',
+                  background: 'var(--input-bg)', border: '1px solid var(--border)',
+                  borderRadius: '10px', color: 'var(--text-primary)', fontSize: '13px', width: '100%',
                   boxSizing: 'border-box'
                 }}
               />
             </div>
           </div>
           {areaLoading ? (
-            <div style={{ textAlign: 'center', padding: '60px', color: '#4a6b5e' }}>Loading areas…</div>
+            <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>Loading areas…</div>
           ) : (
             <Table
               columns={[
@@ -458,7 +458,7 @@ const LocationsPage: React.FC = () => {
         }
       >
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#878787', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             City <span style={{ color: '#dc2626' }}>*</span>
           </label>
           <select
@@ -466,7 +466,7 @@ const LocationsPage: React.FC = () => {
             onChange={e => setAreaCityId(e.target.value)}
             style={{
               width: '100%', padding: '10px 14px',
-              background: '#0a1a15', border: '1px solid #1e3d30',
+              background: 'var(--input-bg)', border: '1px solid var(--border)',
               borderRadius: '10px', color: areaCityId ? '#e8f5f0' : '#4a6b5e',
               fontSize: '14px', boxSizing: 'border-box',
             }}
@@ -490,9 +490,9 @@ const LocationsPage: React.FC = () => {
           </>
         }
       >
-        <p style={{ color: '#e8f5f0', margin: 0, fontSize: '14px' }}>
+        <p style={{ color: 'var(--text-primary)', margin: 0, fontSize: '14px' }}>
           Are you sure you want to delete <strong style={{ color: '#f87171' }}>{deleteTarget?.name}</strong>?
-          {deleteType === 'city' && <span style={{ color: '#878787', display: 'block', marginTop: '8px', fontSize: '13px' }}>This will also delete all areas under this city.</span>}
+          {deleteType === 'city' && <span style={{ color: 'var(--text-secondary)', display: 'block', marginTop: '8px', fontSize: '13px' }}>This will also delete all areas under this city.</span>}
         </p>
       </Modal>
 
@@ -511,12 +511,12 @@ const LocationsPage: React.FC = () => {
           </>
         }
       >
-        <div style={{ color: '#e8f5f0', fontSize: '14px', marginBottom: '20px', lineHeight: '1.5' }}>
+        <div style={{ color: 'var(--text-primary)', fontSize: '14px', marginBottom: '20px', lineHeight: '1.5' }}>
           <p style={{ margin: '0 0 10px 0', color: '#a3b899' }}>
             Please upload an Excel file (<strong>.xlsx</strong> or <strong>.xls</strong>) with the following structure:
           </p>
-          <div style={{ background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '8px', padding: '10px 14px', fontFamily: 'monospace', fontSize: '12px', color: '#4cb790', marginBottom: '16px' }}>
-            <div style={{ borderBottom: '1px solid #1e3d30', paddingBottom: '6px', fontWeight: 'bold', display: 'flex' }}>
+          <div style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'monospace', fontSize: '12px', color: '#4cb790', marginBottom: '16px' }}>
+            <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '6px', fontWeight: 'bold', display: 'flex' }}>
               <span style={{ flex: 1 }}>Column A</span>
               <span style={{ flex: 1 }}>Column B</span>
             </div>
@@ -525,7 +525,7 @@ const LocationsPage: React.FC = () => {
               <span style={{ flex: 1 }}>Area Name (e.g. Gulberg III)</span>
             </div>
           </div>
-          <p style={{ margin: 0, fontSize: '12px', color: '#878787' }}>
+          <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
             * Duplicate cities or areas will be matched case-insensitively and ignored safely.
           </p>
         </div>
@@ -550,10 +550,10 @@ const LocationsPage: React.FC = () => {
             <svg viewBox="0 0 24 24" fill="none" stroke="#4cb790" strokeWidth={2} width="32" height="32" style={{ marginBottom: '8px' }}>
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
             </svg>
-            <span style={{ fontSize: '14px', fontWeight: 600, color: '#e8f5f0', marginBottom: '4px', textAlign: 'center' }}>
+            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px', textAlign: 'center' }}>
               {selectedFile ? selectedFile.name : 'Choose Excel File'}
             </span>
-            <span style={{ fontSize: '11px', color: '#878787' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
               {selectedFile ? `${(selectedFile.size / 1024).toFixed(1)} KB` : 'Click to browse files'}
             </span>
             <input 

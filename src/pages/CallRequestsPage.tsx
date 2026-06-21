@@ -64,7 +64,7 @@ const CallRequestsPage: React.FC = () => {
 
   const handleCreateOrder = (req: CallRequest) => {
     // Navigate to bookings page with state so the modal can be opened
-    navigate('/admin/bookings', { state: { createBookingFromLead: req } });
+    navigate('/bookings', { state: { createBookingFromLead: req } });
   };
 
   const columns = [

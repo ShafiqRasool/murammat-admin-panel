@@ -22,7 +22,6 @@ const Pagination: React.FC<PaginationProps> = ({
   const startIdx = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const endIdx = Math.min(totalItems, currentPage * pageSize);
 
-  // Generate page numbers to show (e.g. 1, 2, 3, ... or similar)
   const getPageNumbers = () => {
     const pages = [];
     const maxVisible = 5;
@@ -44,9 +43,9 @@ const Pagination: React.FC<PaginationProps> = ({
   const buttonStyle = (active: boolean, disabled: boolean): React.CSSProperties => ({
     padding: '6px 12px',
     borderRadius: '8px',
-    border: '1px solid #1e3d30',
-    background: active ? 'linear-gradient(135deg, #00674F, #00a87a)' : '#0a1a15',
-    color: active ? '#fff' : disabled ? '#4a6b5e' : '#e8f5f0',
+    border: '1px solid var(--border)',
+    background: active ? 'linear-gradient(135deg, #00674F, #00a87a)' : 'var(--surface-raised)',
+    color: active ? '#fff' : disabled ? 'var(--text-muted)' : 'var(--text-primary)',
     fontSize: '13px',
     fontWeight: active ? 700 : 500,
     cursor: disabled ? 'not-allowed' : 'pointer',
@@ -65,48 +64,45 @@ const Pagination: React.FC<PaginationProps> = ({
       alignItems: 'center',
       justifyContent: 'space-between',
       padding: '14px 16px',
-      borderTop: '1px solid #1e3d30',
-      background: '#0d241c',
+      borderTop: '1px solid var(--border)',
+      background: 'var(--surface-raised)',
       flexWrap: 'wrap',
       gap: '12px',
     }}>
-      {/* Left section: Info */}
-      <div style={{ fontSize: '13px', color: '#878787' }}>
-        Showing <span style={{ color: '#e8f5f0', fontWeight: 600 }}>{startIdx}</span> to{' '}
-        <span style={{ color: '#e8f5f0', fontWeight: 600 }}>{endIdx}</span> of{' '}
-        <span style={{ color: '#e8f5f0', fontWeight: 600 }}>{totalItems}</span> entries
+      {/* Left: Info */}
+      <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+        Showing <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{startIdx}</span> to{' '}
+        <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{endIdx}</span> of{' '}
+        <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{totalItems}</span> entries
       </div>
 
-      {/* Middle/Right section: Controls */}
+      {/* Right: Controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-        {/* Page Size selector */}
+        {/* Page size selector */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '13px', color: '#878787' }}>Page size:</span>
+          <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Page size:</span>
           <select
             value={pageSize}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
             style={{
               padding: '6px 10px',
-              background: '#0a1a15',
-              border: '1px solid #1e3d30',
+              background: 'var(--input-bg)',
+              border: '1px solid var(--input-border)',
               borderRadius: '8px',
-              color: '#e8f5f0',
+              color: 'var(--text-primary)',
               fontSize: '13px',
               cursor: 'pointer',
               outline: 'none',
             }}
           >
             {pageSizeOptions.map((opt) => (
-              <option key={opt} value={opt} style={{ background: '#0a1a15', color: '#e8f5f0' }}>
-                {opt}
-              </option>
+              <option key={opt} value={opt}>{opt}</option>
             ))}
           </select>
         </div>
 
-        {/* Page Buttons */}
+        {/* Page buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          {/* Previous Page */}
           <button
             type="button"
             onClick={() => currentPage > 1 && onPageChange(currentPage - 1)}
@@ -119,47 +115,28 @@ const Pagination: React.FC<PaginationProps> = ({
             </svg>
           </button>
 
-          {/* First page if not in visible range */}
           {pages[0] > 1 && (
             <>
-              <button
-                type="button"
-                onClick={() => onPageChange(1)}
-                style={buttonStyle(currentPage === 1, false)}
-              >
-                1
-              </button>
-              {pages[0] > 2 && <span style={{ color: '#4a6b5e', padding: '0 4px' }}>...</span>}
+              <button type="button" onClick={() => onPageChange(1)} style={buttonStyle(currentPage === 1, false)}>1</button>
+              {pages[0] > 2 && <span style={{ color: 'var(--text-muted)', padding: '0 4px' }}>...</span>}
             </>
           )}
 
-          {/* Page numbers */}
           {pages.map((p) => (
-            <button
-              type="button"
-              key={p}
-              onClick={() => onPageChange(p)}
-              style={buttonStyle(currentPage === p, false)}
-            >
+            <button type="button" key={p} onClick={() => onPageChange(p)} style={buttonStyle(currentPage === p, false)}>
               {p}
             </button>
           ))}
 
-          {/* Last page if not in visible range */}
           {pages[pages.length - 1] < totalPages && (
             <>
-              {pages[pages.length - 1] < totalPages - 1 && <span style={{ color: '#4a6b5e', padding: '0 4px' }}>...</span>}
-              <button
-                type="button"
-                onClick={() => onPageChange(totalPages)}
-                style={buttonStyle(currentPage === totalPages, false)}
-              >
+              {pages[pages.length - 1] < totalPages - 1 && <span style={{ color: 'var(--text-muted)', padding: '0 4px' }}>...</span>}
+              <button type="button" onClick={() => onPageChange(totalPages)} style={buttonStyle(currentPage === totalPages, false)}>
                 {totalPages}
               </button>
             </>
           )}
 
-          {/* Next Page */}
           <button
             type="button"
             onClick={() => currentPage < totalPages && onPageChange(currentPage + 1)}

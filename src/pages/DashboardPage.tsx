@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  type TooltipProps,
 } from 'recharts';
+import type { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
 import { getCities, getAreas } from '../api/location.api';
 import { getCategories, getServices } from '../api/service.api';
 import { getProviders } from '../api/provider.api';
@@ -81,15 +83,19 @@ const SectionHeader: React.FC<{ title: string; action?: React.ReactNode }> = ({ 
 );
 
 // ─── Chart Card ───────────────────────────────────────────────────────────
-const ChartCard: React.FC<{ title: string; subtitle?: string; children: React.ReactNode; style?: React.CSSProperties }> = ({ title, subtitle, children, style }) => (
+const ChartCard: React.FC<{ title: string; subtitle?: string; action?: React.ReactNode; children: React.ReactNode; style?: React.CSSProperties }> = ({ title, subtitle, action, children, style }) => (
   <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '16px', padding: '22px', boxShadow: 'var(--shadow-card)', ...style }}>
-    <div style={{ marginBottom: '18px' }}>
-      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>{title}</h3>
-      {subtitle && <p style={{ margin: '3px 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>{subtitle}</p>}
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
+      <div>
+        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>{title}</h3>
+        {subtitle && <p style={{ margin: '3px 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>{subtitle}</p>}
+      </div>
+      {action && <div>{action}</div>}
     </div>
     {children}
   </div>
 );
+
 
 // ─── Status Badge ─────────────────────────────────────────────────────────
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
@@ -103,6 +109,78 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   };
   const s = map[status] ?? { bg: '#87878715', color: '#878787', label: status };
   return <span style={{ fontSize: '11px', fontWeight: 600, color: s.color, background: s.bg, padding: '3px 9px', borderRadius: '10px', textTransform: 'capitalize' }}>{s.label}</span>;
+};
+
+interface DateFilterProps {
+  range: string;
+  setRange: (val: string) => void;
+  start: string;
+  setStart: (val: string) => void;
+  end: string;
+  setEnd: (val: string) => void;
+}
+
+const DateFilter: React.FC<DateFilterProps> = ({ range, setRange, start, setStart, end, setEnd }) => {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+      <select
+        value={range}
+        onChange={(e) => setRange(e.target.value)}
+        style={{
+          padding: '6px 12px',
+          background: 'var(--card-bg)',
+          border: '1px solid var(--card-border)',
+          borderRadius: '8px',
+          color: 'var(--text-primary)',
+          fontSize: '12px',
+          cursor: 'pointer',
+          outline: 'none',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+        }}
+      >
+        <option value="all">All Time</option>
+        <option value="today">Today</option>
+        <option value="7days">Last 7 Days</option>
+        <option value="30days">Last 30 Days</option>
+        <option value="thisMonth">This Month</option>
+        <option value="lastMonth">Last Month</option>
+        <option value="custom">Custom Range</option>
+      </select>
+      {range === 'custom' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <input
+            type="date"
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
+            style={{
+              padding: '5px 8px',
+              background: 'var(--card-bg)',
+              border: '1px solid var(--card-border)',
+              borderRadius: '8px',
+              color: 'var(--text-primary)',
+              fontSize: '12px',
+              outline: 'none',
+            }}
+          />
+          <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>to</span>
+          <input
+            type="date"
+            value={end}
+            onChange={(e) => setEnd(e.target.value)}
+            style={{
+              padding: '5px 8px',
+              background: 'var(--card-bg)',
+              border: '1px solid var(--card-border)',
+              borderRadius: '8px',
+              color: 'var(--text-primary)',
+              fontSize: '12px',
+              outline: 'none',
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
 };
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────
@@ -119,6 +197,18 @@ const DashboardPage: React.FC = () => {
     completedBookings: 0, cancelledBookings: 0, totalRevenue: 0,
     openComplaints: 0,
   });
+  const [rawBookings, setRawBookings] = useState<any[]>([]);
+
+  // Date Filters for Bookings & Revenue chart
+  const [revenueRange, setRevenueRange] = useState('7days');
+  const [revStart, setRevStart] = useState('');
+  const [revEnd, setRevEnd] = useState('');
+
+  // Date Filters for Booking Status chart
+  const [statusRange, setStatusRange] = useState('7days');
+  const [statusStart, setStatusStart] = useState('');
+  const [statusEnd, setStatusEnd] = useState('');
+
   const [recentBookings, setRecentBookings] = useState<any[]>([]);
   const [bookingStatusData, setBookingStatusData] = useState<any[]>([]);
   const [monthlyData, setMonthlyData] = useState<any[]>([]);
@@ -141,7 +231,7 @@ const DashboardPage: React.FC = () => {
         can('view_services') ? getCategories() : Promise.resolve([]),
         can('view_services') ? getServices() : Promise.resolve([]),
         can('view_providers') ? getProviders() : Promise.resolve([]),
-        can('view_bookings') ? getAdminBookings({ limit: 200 }) : Promise.resolve({ data: [], total: 0 }),
+        can('view_bookings') ? getAdminBookings({ limit: 1000 }) : Promise.resolve({ data: [], total: 0 }), // increased limit for better filtering range
         can('view_customers') ? getCustomers({ limit: 1 }) : Promise.resolve({ data: [], total: 0, totalSpent: 0, totalBookings: 0 }),
         can('view_complaints') ? getComplaints({ limit: 200 }) : Promise.resolve({ data: [], total: 0 }),
       ]);
@@ -159,10 +249,14 @@ const DashboardPage: React.FC = () => {
       const complaintsList: any[] = (complaintsRes as any)?.data ?? [];
 
       // Compute stats
-      const pending = bookingsList.filter(b => b.status === 'pending').length;
-      const completed = bookingsList.filter(b => b.status === 'completed').length;
-      const cancelled = bookingsList.filter(b => b.status === 'cancelled').length;
-      const revenue = bookingsList.filter(b => b.status === 'completed').reduce((s, b) => s + (Number(b.total_amount) || 0), 0);
+      const isCompleted = (status: string) => ['completed', 'Rated & Reviewed', 'Work Done'].includes(status);
+      const isPending = (status: string) => ['pending', 'BookingDone'].includes(status);
+      const isCancelled = (status: string) => ['cancelled'].includes(status);
+
+      const pending = bookingsList.filter(b => isPending(b.status)).length;
+      const completed = bookingsList.filter(b => isCompleted(b.status)).length;
+      const cancelled = bookingsList.filter(b => isCancelled(b.status)).length;
+      const revenue = bookingsList.filter(b => isCompleted(b.status)).reduce((s, b) => s + (Number(b.total_amount) || 0), 0);
       const openComplaints = complaintsList.filter(c => c.status === 'open' || c.status === 'pending').length;
 
       setStats({
@@ -184,27 +278,7 @@ const DashboardPage: React.FC = () => {
 
       // Recent bookings (last 5)
       setRecentBookings(bookingsList.slice(0, 6));
-
-      // Booking status pie
-      setBookingStatusData([
-        { name: 'Pending', value: pending, color: '#d97706' },
-        { name: 'Completed', value: completed, color: '#16a34a' },
-        { name: 'Cancelled', value: cancelled, color: '#dc2626' },
-        { name: 'Active', value: bookingsList.length - pending - completed - cancelled, color: '#00674F' },
-      ].filter(d => d.value > 0));
-
-      // Monthly bookings chart (last 6 months from bookingsList)
-      const now = new Date();
-      const months = Array.from({ length: 6 }, (_, i) => {
-        const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-        return { month: d.toLocaleString('default', { month: 'short' }), year: d.getFullYear(), m: d.getMonth(), y: d.getFullYear(), bookings: 0, revenue: 0 };
-      });
-      bookingsList.forEach(b => {
-        const d = new Date(b.created_at);
-        const m = months.find(x => x.m === d.getMonth() && x.y === d.getFullYear());
-        if (m) { m.bookings++; if (b.status === 'completed') m.revenue += Number(b.total_amount) || 0; }
-      });
-      setMonthlyData(months.map(m => ({ name: m.month, Bookings: m.bookings, Revenue: Math.round(m.revenue / 1000) })));
+      setRawBookings(bookingsList);
 
       // Provider approval bar
       setProviderApprovalData([
@@ -220,7 +294,214 @@ const DashboardPage: React.FC = () => {
     }
   }, []);
 
+  const getRevenueSubtitle = () => {
+    if (revenueRange === 'today') return 'Today (Revenue in thousands PKR)';
+    if (revenueRange === '7days') return 'Last 7 Days (Revenue in thousands PKR)';
+    if (revenueRange === '30days') return 'Last 30 Days (Revenue in thousands PKR)';
+    if (revenueRange === 'thisMonth') return 'This Month (Revenue in thousands PKR)';
+    if (revenueRange === 'lastMonth') return 'Last Month (Revenue in thousands PKR)';
+    if (revenueRange === 'custom') {
+      const startStr = revStart ? new Date(revStart).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+      const endStr = revEnd ? new Date(revEnd).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+      return `Custom Range (${startStr || 'Start'} to ${endStr || 'End'}) (Revenue in thousands PKR)`;
+    }
+    return 'All Time (Revenue in thousands PKR)';
+  };
+
+  const getStatusSubtitle = () => {
+    if (statusRange === 'today') return 'Today distribution';
+    if (statusRange === '7days') return 'Last 7 Days distribution';
+    if (statusRange === '30days') return 'Last 30 Days distribution';
+    if (statusRange === 'thisMonth') return 'This Month distribution';
+    if (statusRange === 'lastMonth') return 'Last Month distribution';
+    if (statusRange === 'custom') {
+      const startStr = statusStart ? new Date(statusStart).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+      const endStr = statusEnd ? new Date(statusEnd).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+      return `Custom Range (${startStr || 'Start'} to ${endStr || 'End'}) distribution`;
+    }
+    return 'All Time distribution';
+  };
+
+  // Recalculate dynamic chart data on filter changes
+  useEffect(() => {
+    if (!rawBookings || rawBookings.length === 0) {
+      setMonthlyData([]);
+      setBookingStatusData([]);
+      return;
+    }
+
+    const isCompleted = (status: string) => ['completed', 'Rated & Reviewed', 'Work Done'].includes(status);
+    const isPending = (status: string) => ['pending', 'BookingDone'].includes(status);
+    const isCancelled = (status: string) => ['cancelled'].includes(status);
+
+    // ─── 1. BOOKINGS & REVENUE FILTER & GROUPING ──────────────────────────────────
+    const now = new Date();
+    let revStartDate = new Date(now.getFullYear(), now.getMonth() - 5, 1); // default 6 months
+    let revEndDate = now;
+
+    if (revenueRange === 'today') {
+      revStartDate = new Date();
+      revStartDate.setHours(0, 0, 0, 0);
+    } else if (revenueRange === '7days') {
+      revStartDate = new Date();
+      revStartDate.setDate(now.getDate() - 7);
+    } else if (revenueRange === '30days') {
+      revStartDate = new Date();
+      revStartDate.setDate(now.getDate() - 30);
+    } else if (revenueRange === 'thisMonth') {
+      revStartDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    } else if (revenueRange === 'lastMonth') {
+      revStartDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      revEndDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+    } else if (revenueRange === 'custom') {
+      if (revStart) revStartDate = new Date(revStart);
+      if (revEnd) {
+        revEndDate = new Date(revEnd);
+        revEndDate.setHours(23, 59, 59, 999);
+      }
+    } else if (revenueRange === 'all') {
+      const oldestBooking = rawBookings.reduce((min, b) => {
+        const d = new Date(b.created_at);
+        return d < min ? d : min;
+      }, new Date());
+      revStartDate = new Date(oldestBooking.getFullYear(), oldestBooking.getMonth(), 1);
+    }
+
+    const filteredRevenueBookings = rawBookings.filter(b => {
+      const d = new Date(b.created_at);
+      return d >= revStartDate && d <= revEndDate;
+    });
+
+    const diffTime = Math.abs(revEndDate.getTime() - revStartDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays <= 35) {
+      // Group by Day
+      const getDaysInRange = (s: Date, e: Date) => {
+        const dSlots: any[] = [];
+        const start = new Date(s.getFullYear(), s.getMonth(), s.getDate());
+        const end = new Date(e.getFullYear(), e.getMonth(), e.getDate());
+        while (start <= end) {
+          dSlots.push({
+            name: start.toLocaleDateString('default', { month: 'short', day: 'numeric' }),
+            year: start.getFullYear(),
+            month: start.getMonth(),
+            date: start.getDate(),
+            bookings: 0,
+            revenue: 0
+          });
+          start.setDate(start.getDate() + 1);
+        }
+        return dSlots;
+      };
+
+      const days = getDaysInRange(revStartDate, revEndDate);
+
+      filteredRevenueBookings.forEach(b => {
+        const d = new Date(b.created_at);
+        const day = days.find(x => x.date === d.getDate() && x.month === d.getMonth() && x.year === d.getFullYear());
+        if (day) {
+          day.bookings++;
+          if (isCompleted(b.status)) {
+            day.revenue += Number(b.total_amount) || 0;
+          }
+        }
+      });
+
+      setMonthlyData(days.map(d => ({
+        name: d.name,
+        Bookings: d.bookings,
+        Revenue: Math.round(d.revenue / 1000)
+      })));
+    } else {
+      // Group by Month
+      const getMonthsInRange = (s: Date, e: Date) => {
+        const mSlots: any[] = [];
+        const start = new Date(s.getFullYear(), s.getMonth(), 1);
+        const end = new Date(e.getFullYear(), e.getMonth(), 1);
+        while (start <= end) {
+          mSlots.push({
+            month: start.toLocaleString('default', { month: 'short' }),
+            year: start.getFullYear(),
+            m: start.getMonth(),
+            y: start.getFullYear(),
+            bookings: 0,
+            revenue: 0
+          });
+          start.setMonth(start.getMonth() + 1);
+        }
+        return mSlots;
+      };
+
+      const months = getMonthsInRange(revStartDate, revEndDate);
+
+      filteredRevenueBookings.forEach(b => {
+        const d = new Date(b.created_at);
+        const m = months.find(x => x.m === d.getMonth() && x.y === d.getFullYear());
+        if (m) {
+          m.bookings++;
+          if (isCompleted(b.status)) {
+            m.revenue += Number(b.total_amount) || 0;
+          }
+        }
+      });
+
+      setMonthlyData(months.map(m => ({
+        name: `${m.month} ${String(m.year).substring(2)}`,
+        Bookings: m.bookings,
+        Revenue: Math.round(m.revenue / 1000)
+      })));
+    }
+
+    // ─── 2. BOOKING STATUS PIE CHART FILTER & COUNT ─────────────────────────────
+    let statusStartDate = new Date();
+    statusStartDate.setDate(now.getDate() - 7); // Default to last 7 days
+    let statusEndDate = now;
+
+    if (statusRange === 'today') {
+      statusStartDate = new Date();
+      statusStartDate.setHours(0, 0, 0, 0);
+    } else if (statusRange === '7days') {
+      statusStartDate = new Date();
+      statusStartDate.setDate(now.getDate() - 7);
+    } else if (statusRange === '30days') {
+      statusStartDate = new Date();
+      statusStartDate.setDate(now.getDate() - 30);
+    } else if (statusRange === 'thisMonth') {
+      statusStartDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    } else if (statusRange === 'lastMonth') {
+      statusStartDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      statusEndDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+    } else if (statusRange === 'custom') {
+      if (statusStart) statusStartDate = new Date(statusStart);
+      if (statusEnd) {
+        statusEndDate = new Date(statusEnd);
+        statusEndDate.setHours(23, 59, 59, 999);
+      }
+    } else if (statusRange === 'all') {
+      statusStartDate = new Date(0); // Epoch start
+    }
+
+    const filteredStatusBookings = rawBookings.filter(b => {
+      const d = new Date(b.created_at);
+      return d >= statusStartDate && d <= statusEndDate;
+    });
+
+    const sPending = filteredStatusBookings.filter(b => isPending(b.status)).length;
+    const sCompleted = filteredStatusBookings.filter(b => isCompleted(b.status)).length;
+    const sCancelled = filteredStatusBookings.filter(b => isCancelled(b.status)).length;
+
+    setBookingStatusData([
+      { name: 'Pending', value: sPending, color: '#d97706' },
+      { name: 'Completed', value: sCompleted, color: '#16a34a' },
+      { name: 'Cancelled', value: sCancelled, color: '#dc2626' },
+      { name: 'Active', value: filteredStatusBookings.length - sPending - sCompleted - sCancelled, color: '#00674F' },
+    ].filter(d => d.value > 0));
+
+  }, [rawBookings, revenueRange, revStart, revEnd, statusRange, statusStart, statusEnd]);
+
   useEffect(() => { load(); }, [load]);
+
 
   const ICONS = {
     users: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="22" height="22"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
@@ -305,7 +586,20 @@ const DashboardPage: React.FC = () => {
 
         {/* Monthly Bookings Area Chart */}
         {can('view_bookings') && (
-          <ChartCard title="Bookings & Revenue" subtitle="Last 6 months (Revenue in thousands PKR)">
+          <ChartCard
+            title="Bookings & Revenue"
+            subtitle={getRevenueSubtitle()}
+            action={
+              <DateFilter
+                range={revenueRange}
+                setRange={setRevenueRange}
+                start={revStart}
+                setStart={setRevStart}
+                end={revEnd}
+                setEnd={setRevEnd}
+              />
+            }
+          >
             <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                 <defs>
@@ -332,14 +626,27 @@ const DashboardPage: React.FC = () => {
 
         {/* Booking Status Pie Chart */}
         {can('view_bookings') && (
-          <ChartCard title="Booking Status" subtitle="Current distribution of all bookings">
+          <ChartCard
+            title="Booking Status"
+            subtitle={getStatusSubtitle()}
+            action={
+              <DateFilter
+                range={statusRange}
+                setRange={setStatusRange}
+                start={statusStart}
+                setStart={setStatusStart}
+                end={statusEnd}
+                setEnd={setStatusEnd}
+              />
+            }
+          >
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie data={bookingStatusData} cx="50%" cy="50%" innerRadius={55} outerRadius={90} paddingAngle={3} dataKey="value">
                   {bookingStatusData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                 </Pie>
-                <Tooltip contentStyle={{ background: tooltipBg, border: `1px solid ${tooltipBorder}`, borderRadius: '10px' }} formatter={(val, name) => [val, name]} />
-                <Legend wrapperStyle={{ fontSize: '12px' }} formatter={(value, entry: any) => <span style={{ color: 'var(--text-secondary)' }}>{value}: {entry.payload?.value ?? 0}</span>} />
+                <Tooltip contentStyle={{ background: tooltipBg, border: `1px solid ${tooltipBorder}`, borderRadius: '10px' }} formatter={(val: ValueType, name: NameType) => [val, name]} />
+                <Legend wrapperStyle={{ fontSize: '12px' }} formatter={(value: string, entry: any) => <span style={{ color: 'var(--text-secondary)' }}>{value}: {entry.payload?.value ?? 0}</span>} />
               </PieChart>
             </ResponsiveContainer>
           </ChartCard>

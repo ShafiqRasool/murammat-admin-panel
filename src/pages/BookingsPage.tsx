@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { getAdminBookings, assignBooking, cancelBooking, createAdminBooking, getAutoAssignSetting, updateAutoAssignSetting, reopenBooking, type Booking } from '../api/booking.api';
+import { getAdminBookings, assignBooking, cancelBooking, updateBookingStatus, createAdminBooking, getAutoAssignSetting, updateAutoAssignSetting, reopenBooking, type Booking } from '../api/booking.api';
 import { getCategories, type ServiceCategory } from '../api/service.api';
 import { getServices, type Service } from '../api/service.api';
 import { getProviders, type Provider } from '../api/provider.api';
@@ -129,37 +129,55 @@ const BookingsPage: React.FC = () => {
 
   // ── Handle Navigation State (from Call Requests) ──
   useEffect(() => {
-    if (locationState?.createBookingFromLead) {
-      const lead = locationState.createBookingFromLead;
-      // Pre-fill manual customer details
-      setIsManualCustomer(true);
-      
-      const [firstName, ...lastNames] = (lead.name || '').split(' ');
-      setManualCustomer(prev => ({
-        ...prev,
-        first_name: firstName || '',
-        last_name: lastNames.join(' ') || '',
-        phone: lead.phone || '',
-        address_line1: lead.address || '',
-      }));
+    const prefillLead = async () => {
+      if (locationState?.createBookingFromLead) {
+        const lead = locationState.createBookingFromLead;
+        setIsManualCustomer(true);
+        
+        const [firstName, ...lastNames] = (lead.name || '').split(' ');
+        const defaultCityId = cities[0]?.id || '';
+        let matchedAreaId = '';
+        
+        if (defaultCityId) {
+          try {
+            const loadedAreas = await getAreas(defaultCityId);
+            setAreas(loadedAreas);
+            const matched = loadedAreas.find((a: any) => a.name.toLowerCase().trim() === (lead.area || '').toLowerCase().trim());
+            if (matched) {
+              matchedAreaId = matched.id;
+            } else if (loadedAreas.length > 0) {
+              matchedAreaId = loadedAreas[0].id;
+            }
+          } catch (err) {
+            console.error('Failed to load areas for prefill', err);
+          }
+        }
+        
+        setManualCustomer({
+          first_name: firstName || '',
+          last_name: lastNames.join(' ') || '',
+          phone: lead.phone || '',
+          address_line1: lead.address || '',
+          city_id: defaultCityId,
+          area_id: matchedAreaId
+        });
 
-      // Pre-fill problem message with the requested service & area context
-      setCreateForm(prev => ({
-        ...prev,
-        problem_message: `Requested Service: ${lead.service}\nArea: ${lead.area}`,
-      }));
+        setCreateForm(prev => ({
+          ...prev,
+          problem_message: `Requested Service: ${lead.service}\nArea: ${lead.area}`,
+        }));
 
-      // Open the create modal automatically
-      setCreateModal(true);
-      
-      // Update status to 'converted' automatically (fire-and-forget)
-      if (lead.id) {
-         import('../api/callRequest.api').then(api => {
-            api.updateCallRequestStatus(lead.id, 'converted').catch(() => {});
-         });
+        setCreateModal(true);
+        
+        if (lead.id) {
+           import('../api/callRequest.api').then(api => {
+              api.updateCallRequestStatus(lead.id, 'converted').catch(() => {});
+           });
+        }
       }
-    }
-  }, [locationState]);
+    };
+    prefillLead();
+  }, [locationState, cities]);
 
   useEffect(() => {
     if (createForm.category_id) {
@@ -336,8 +354,8 @@ const BookingsPage: React.FC = () => {
         {/* Header Row */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#e8f5f0' }}>Bookings</h2>
-            <p style={{ margin: '4px 0 0', color: '#878787', fontSize: '13px' }}>Manage customer orders and assignments</p>
+            <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)' }}>Bookings</h2>
+            <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: '13px' }}>Manage customer orders and assignments</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
             <div 
@@ -345,8 +363,8 @@ const BookingsPage: React.FC = () => {
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '16px', 
-                background: '#0a1a15', 
-                border: '1px solid #1e3d30', 
+                background: 'var(--input-bg)', 
+                border: '1px solid var(--border)', 
                 padding: '8px 16px', 
                 borderRadius: '10px' 
               }}
@@ -382,7 +400,7 @@ const BookingsPage: React.FC = () => {
 
               {globalAutoAssign && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderLeft: '1px solid #1e3d30', paddingLeft: '12px' }}>
-                  <span style={{ fontSize: '11px', color: '#878787', fontWeight: 600, textTransform: 'uppercase' }}>Radius (km):</span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Radius (km):</span>
                   <input 
                     type="number" 
                     min="1"
@@ -400,8 +418,8 @@ const BookingsPage: React.FC = () => {
                     style={{ 
                       width: '50px', 
                       padding: '4px 6px', 
-                      background: '#122b22', 
-                      border: '1px solid #1e3d30', 
+                      background: 'var(--surface)', 
+                      border: '1px solid var(--border)', 
                       borderRadius: '6px', 
                       color: '#fff', 
                       fontSize: '12px',
@@ -437,7 +455,7 @@ const BookingsPage: React.FC = () => {
           {/* Search Bar */}
           <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="16" height="16"
-              style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#4a6b5e' }}>
+              style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
             <input
@@ -445,8 +463,8 @@ const BookingsPage: React.FC = () => {
               placeholder="Search Customer or Order ID..."
               style={{
                 width: '100%', padding: '10px 14px 10px 40px',
-                background: '#0a1a15', border: '1px solid #1e3d30',
-                borderRadius: '10px', color: '#e8f5f0', fontSize: '14px',
+                background: 'var(--input-bg)', border: '1px solid var(--border)',
+                borderRadius: '10px', color: 'var(--text-primary)', fontSize: '14px',
               }}
             />
           </div>
@@ -455,8 +473,8 @@ const BookingsPage: React.FC = () => {
           <select
             value={categoryId} onChange={e => setCategoryId(e.target.value)}
             style={{
-              padding: '10.5px 14px', background: '#0a1a15', border: '1px solid #1e3d30',
-              borderRadius: '10px', color: '#e8f5f0', fontSize: '13px', cursor: 'pointer',
+              padding: '10.5px 14px', background: 'var(--input-bg)', border: '1px solid var(--border)',
+              borderRadius: '10px', color: 'var(--text-primary)', fontSize: '13px', cursor: 'pointer',
               minWidth: '160px'
             }}
           >
@@ -468,8 +486,8 @@ const BookingsPage: React.FC = () => {
           <select
             value={dateSort} onChange={e => setDateSort(e.target.value as any)}
             style={{
-              padding: '10.5px 14px', background: '#0a1a15', border: '1px solid #1e3d30',
-              borderRadius: '10px', color: '#e8f5f0', fontSize: '13px', cursor: 'pointer'
+              padding: '10.5px 14px', background: 'var(--input-bg)', border: '1px solid var(--border)',
+              borderRadius: '10px', color: 'var(--text-primary)', fontSize: '13px', cursor: 'pointer'
             }}
           >
             <option value="desc">Newest First</option>
@@ -478,14 +496,14 @@ const BookingsPage: React.FC = () => {
         </div>
 
         {/* Bottom Row: Status Tabs */}
-        <div style={{ display: 'flex', gap: '6px', background: '#0a1a15', padding: '6px', borderRadius: '12px', border: '1px solid #1e3d30', overflowX: 'auto' }}>
+        <div style={{ display: 'flex', gap: '6px', background: 'var(--input-bg)', padding: '6px', borderRadius: '12px', border: '1px solid var(--border)', overflowX: 'auto' }}>
           {STATUS_TABS.map(t => (
             <button
               key={t.key} onClick={() => setStatusTab(t.key)}
               style={{
                 padding: '8px 20px', borderRadius: '8px', border: 'none',
-                background: statusTab === t.key ? (t.color ?? '#1e3d30') : 'transparent',
-                color: statusTab === t.key ? '#fff' : '#878787',
+                background: statusTab === t.key ? (t.color ?? 'var(--surface-raised)') : 'transparent',
+                color: statusTab === t.key ? '#fff' : 'var(--text-secondary)',
                 fontWeight: statusTab === t.key ? 600 : 500,
                 fontSize: '13px', cursor: 'pointer', transition: 'all 0.15s',
                 whiteSpace: 'nowrap',
@@ -498,8 +516,8 @@ const BookingsPage: React.FC = () => {
       </div>
 
       {/* ── Table ── */}
-      <div style={{ background: '#122b22', border: '1px solid #1e3d30', borderRadius: '12px', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', padding: '14px 16px', borderBottom: '1px solid #1e3d30', background: '#0d241c' }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', padding: '14px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface-raised)' }}>
           {[
             { label: 'Booking Info', flex: 1.2 },
             { label: 'Customer', flex: 1.0 },
@@ -509,16 +527,16 @@ const BookingsPage: React.FC = () => {
             { label: 'Status', flex: 0.8 },
             { label: 'Actions', flex: 0.8, align: 'right' },
           ].map(c => (
-            <div key={c.label} style={{ flex: c.flex, fontSize: '11px', fontWeight: 700, color: '#878787', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: (c.align as any) || 'left' }}>
+            <div key={c.label} style={{ flex: c.flex, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: (c.align as any) || 'left' }}>
               {c.label}
             </div>
           ))}
         </div>
 
         {loading ? (
-          <div style={{ padding: '60px', textAlign: 'center', color: '#4a6b5e' }}>Loading orders...</div>
+          <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading orders...</div>
         ) : bookings.length === 0 ? (
-          <div style={{ padding: '60px', textAlign: 'center', color: '#4a6b5e' }}>No orders found for the selected filters.</div>
+          <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>No orders found for the selected filters.</div>
         ) : (
           bookings.map((b, i) => (
             <div
@@ -528,7 +546,7 @@ const BookingsPage: React.FC = () => {
                 borderBottom: i < bookings.length - 1 ? '1px solid #1e3d3060' : 'none',
                 transition: 'background 0.12s', cursor: 'pointer'
               }}
-              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#183828'}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--table-row-hover)'}
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
               onClick={() => {
                 setSelectedProvider('');
@@ -537,20 +555,20 @@ const BookingsPage: React.FC = () => {
             >
               {/* Booking Info */}
               <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '14px', color: '#e8f5f0', fontWeight: 600 }}>
+                <span style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: 600 }}>
                   Order #{b.id.split('-')[0].toUpperCase()}
                 </span>
-                <span style={{ fontSize: '12px', color: '#878787' }}>
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                   {new Date(b.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
                 </span>
               </div>
               
               {/* Customer */}
               <div style={{ flex: 1.0, display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
-                <span style={{ fontSize: '13px', color: '#e8f5f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>
                   {b.customer_name || 'No Name'}
                 </span>
-                <span style={{ fontSize: '11px', color: '#878787', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {b.customer_phone}
                 </span>
               </div>
@@ -560,7 +578,7 @@ const BookingsPage: React.FC = () => {
                 <span 
                   style={{ 
                     fontSize: '13px', 
-                    color: '#e8f5f0', 
+                    color: 'var(--text-primary)', 
                     overflow: 'hidden', 
                     textOverflow: 'ellipsis', 
                     whiteSpace: 'nowrap', 
@@ -587,8 +605,46 @@ const BookingsPage: React.FC = () => {
               </div>
 
               {/* Status */}
-              <div style={{ flex: 0.8 }}>
-                <Badge variant={statusVariant(b.status)}>{b.status.replace('_', ' ')}</Badge>
+              <div style={{ flex: 0.8 }} onClick={e => e.stopPropagation()}>
+                {b.provider_id ? (
+                  <select
+                    value={b.status}
+                    onChange={async (e) => {
+                      const newStatus = e.target.value;
+                      if (window.confirm(`Are you sure you want to change order status to "${newStatus}"?`)) {
+                        try {
+                          await updateBookingStatus(b.id, newStatus);
+                          toast('Status updated successfully', 'success');
+                          loadBookings();
+                        } catch (err: any) {
+                          toast(err?.response?.data?.error || 'Failed to update status', 'error');
+                        }
+                      }
+                    }}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--input-bg)',
+                      color: 'var(--text-primary)',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      outline: 'none',
+                      boxShadow: 'var(--shadow-card)',
+                      width: '100%'
+                    }}
+                  >
+                    <option value="Technician Assigned">Technician Assigned</option>
+                    <option value="Work Started">Work Started</option>
+                    <option value="Work Done">Work Done</option>
+                    <option value="Rated & Reviewed">Rated & Reviewed</option>
+                    <option value="Repair">Repair</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                ) : (
+                  <Badge variant={statusVariant(b.status)}>{b.status.replace('_', ' ')}</Badge>
+                )}
               </div>
 
               {/* Actions */}
@@ -659,23 +715,23 @@ const BookingsPage: React.FC = () => {
           }
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ background: '#0a1a15', padding: '16px', borderRadius: '12px', border: '1px solid #1e3d30' }}>
+            <div style={{ background: 'var(--input-bg)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <span style={{ color: '#878787', fontSize: '13px' }}>Current Status</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Current Status</span>
                 <Badge variant={statusVariant(viewModal.status)}>{viewModal.status.replace('_', ' ')}</Badge>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span style={{ color: '#878787', fontSize: '13px' }}>Customer Name</span>
-                <span style={{ color: '#e8f5f0', fontSize: '13px' }}>{viewModal.customer_name || '—'}</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Customer Name</span>
+                <span style={{ color: 'var(--text-primary)', fontSize: '13px' }}>{viewModal.customer_name || '—'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span style={{ color: '#878787', fontSize: '13px' }}>Customer Phone</span>
-                <span style={{ color: '#e8f5f0', fontSize: '13px' }}>{viewModal.customer_phone || '—'}</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Customer Phone</span>
+                <span style={{ color: 'var(--text-primary)', fontSize: '13px' }}>{viewModal.customer_phone || '—'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#878787', fontSize: '13px' }}>Assigned Provider</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Assigned Provider</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ color: '#e8f5f0', fontSize: '13px' }}>{viewModal.provider_name || '—'}</span>
+                  <span style={{ color: 'var(--text-primary)', fontSize: '13px' }}>{viewModal.provider_name || '—'}</span>
                   {viewModal.provider_id && (
                     <Button
                       type="button"
@@ -710,41 +766,41 @@ const BookingsPage: React.FC = () => {
               </div>
             )}
 
-            <h4 style={{ color: '#e8f5f0', fontSize: '14px', margin: '8px 0 0' }}>Ordered Items</h4>
-            <div style={{ border: '1px solid #1e3d30', borderRadius: '8px', overflow: 'hidden' }}>
+            <h4 style={{ color: 'var(--text-primary)', fontSize: '14px', margin: '8px 0 0' }}>Ordered Items</h4>
+            <div style={{ border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
               {viewModal.items.map((item, idx) => (
                 <div key={item.item_id} style={{
                   padding: '12px 16px', display: 'flex', justifyContent: 'space-between',
                   borderBottom: idx < viewModal.items.length - 1 ? '1px solid #1e3d30' : 'none'
                 }}>
-                  <span style={{ color: '#e8f5f0', fontSize: '13px' }}>{item.quantity}x {item.service_name}</span>
-                  <span style={{ color: '#878787', fontSize: '13px' }}>PKR {(Number(item.price) * item.quantity).toLocaleString()}</span>
+                  <span style={{ color: 'var(--text-primary)', fontSize: '13px' }}>{item.quantity}x {item.service_name}</span>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>PKR {(Number(item.price) * item.quantity).toLocaleString()}</span>
                 </div>
               ))}
             </div>
             
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 16px' }}>
-              <span style={{ color: '#e8f5f0', fontSize: '15px', fontWeight: 700 }}>Total</span>
+              <span style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: 700 }}>Total</span>
               <span style={{ color: '#00674F', fontSize: '16px', fontWeight: 800 }}>PKR {viewModal.total_amount.toLocaleString()}</span>
             </div>
 
             {/* Assignment Section inside Details Modal for Pending Orders */}
             {viewModal.status === 'BookingDone' && (
-              <div style={{ marginTop: '20px', borderTop: '1px solid #1e3d30', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <h4 style={{ color: '#e8f5f0', fontSize: '14px', margin: '0', fontWeight: 700 }}>Assign Provider</h4>
+              <div style={{ marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <h4 style={{ color: 'var(--text-primary)', fontSize: '14px', margin: '0', fontWeight: 700 }}>Assign Provider</h4>
                 
                 {/* Filters */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#878787', marginBottom: '6px', textTransform: 'uppercase' }}>Availability</label>
-                    <div style={{ display: 'flex', background: '#0a1a15', borderRadius: '8px', border: '1px solid #1e3d30', overflow: 'hidden' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>Availability</label>
+                    <div style={{ display: 'flex', background: 'var(--input-bg)', borderRadius: '8px', border: '1px solid var(--border)', overflow: 'hidden' }}>
                       {['all', 'online', 'offline'].map(status => (
                         <button
                           key={status} type="button" onClick={() => setProviderOnlineFilter(status as any)}
                           style={{
                             flex: 1, padding: '8px', border: 'none',
-                            background: providerOnlineFilter === status ? '#1e3d30' : 'transparent',
-                            color: providerOnlineFilter === status ? '#e8f5f0' : '#878787',
+                            background: providerOnlineFilter === status ? 'var(--surface-raised)' : 'transparent',
+                            color: providerOnlineFilter === status ? 'var(--text-primary)' : 'var(--text-secondary)',
                             fontSize: '12px', fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize'
                           }}
                         >
@@ -755,10 +811,10 @@ const BookingsPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#878787', marginBottom: '6px', textTransform: 'uppercase' }}>Service Category</label>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>Service Category</label>
                     <select
                       value={providerCategoryFilter} onChange={e => setProviderCategoryFilter(e.target.value)}
-                      style={{ width: '100%', padding: '9px 12px', background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '8px', color: '#e8f5f0', fontSize: '13px', outline: 'none' }}
+                      style={{ width: '100%', padding: '9px 12px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
                     >
                       <option value="all">All Categories</option>
                       {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -766,10 +822,10 @@ const BookingsPage: React.FC = () => {
                   </div>
 
                   <div style={{ gridColumn: 'span 2' }}>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#878787', marginBottom: '6px', textTransform: 'uppercase' }}>City / Location</label>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>City / Location</label>
                     <select
                       value={providerCityFilter} onChange={e => setProviderCityFilter(e.target.value)}
-                      style={{ width: '100%', padding: '9px 12px', background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '8px', color: '#e8f5f0', fontSize: '13px', outline: 'none' }}
+                      style={{ width: '100%', padding: '9px 12px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
                     >
                       <option value="all">All Cities</option>
                       {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -779,14 +835,14 @@ const BookingsPage: React.FC = () => {
 
                 {/* Provider Select */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#878787', marginBottom: '8px', textTransform: 'uppercase' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>
                     Select Approved Provider ({filteredProviders.length} available)
                   </label>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <div style={{ flex: 1, background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '10px', overflow: 'hidden' }}>
+                    <div style={{ flex: 1, background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
                       <select
                         value={selectedProvider} onChange={e => setSelectedProvider(e.target.value)}
-                        style={{ width: '100%', padding: '12px 14px', background: 'transparent', border: 'none', color: selectedProvider ? '#e8f5f0' : '#4a6b5e', fontSize: '14px', outline: 'none', cursor: 'pointer' }}
+                        style={{ width: '100%', padding: '12px 14px', background: 'transparent', border: 'none', color: selectedProvider ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '14px', outline: 'none', cursor: 'pointer' }}
                       >
                         <option value="">Choose a provider...</option>
                         {filteredProviders.map(p => (
@@ -835,15 +891,15 @@ const BookingsPage: React.FC = () => {
             {/* Filters */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#878787', marginBottom: '6px', textTransform: 'uppercase' }}>Availability</label>
-                <div style={{ display: 'flex', background: '#0a1a15', borderRadius: '8px', border: '1px solid #1e3d30', overflow: 'hidden' }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>Availability</label>
+                <div style={{ display: 'flex', background: 'var(--input-bg)', borderRadius: '8px', border: '1px solid var(--border)', overflow: 'hidden' }}>
                   {['all', 'online', 'offline'].map(status => (
                     <button
                       key={status} type="button" onClick={() => setProviderOnlineFilter(status as any)}
                       style={{
                         flex: 1, padding: '8px', border: 'none',
-                        background: providerOnlineFilter === status ? '#1e3d30' : 'transparent',
-                        color: providerOnlineFilter === status ? '#e8f5f0' : '#878787',
+                        background: providerOnlineFilter === status ? 'var(--surface-raised)' : 'transparent',
+                        color: providerOnlineFilter === status ? 'var(--text-primary)' : 'var(--text-secondary)',
                         fontSize: '12px', fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize'
                       }}
                     >
@@ -854,10 +910,10 @@ const BookingsPage: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#878787', marginBottom: '6px', textTransform: 'uppercase' }}>Service Category</label>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>Service Category</label>
                 <select
                   value={providerCategoryFilter} onChange={e => setProviderCategoryFilter(e.target.value)}
-                  style={{ width: '100%', padding: '9px 12px', background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '8px', color: '#e8f5f0', fontSize: '13px', outline: 'none' }}
+                  style={{ width: '100%', padding: '9px 12px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
                 >
                   <option value="all">All Categories</option>
                   {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -865,10 +921,10 @@ const BookingsPage: React.FC = () => {
               </div>
 
               <div style={{ gridColumn: 'span 2' }}>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#878787', marginBottom: '6px', textTransform: 'uppercase' }}>City / Location</label>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>City / Location</label>
                 <select
                   value={providerCityFilter} onChange={e => setProviderCityFilter(e.target.value)}
-                  style={{ width: '100%', padding: '9px 12px', background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '8px', color: '#e8f5f0', fontSize: '13px', outline: 'none' }}
+                  style={{ width: '100%', padding: '9px 12px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
                 >
                   <option value="all">All Cities</option>
                   {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -878,14 +934,14 @@ const BookingsPage: React.FC = () => {
 
             {/* Provider Select */}
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#878787', marginBottom: '8px', textTransform: 'uppercase' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>
                 Select Approved Provider ({filteredProviders.length} available)
               </label>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <div style={{ flex: 1, background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '10px', overflow: 'hidden' }}>
+                <div style={{ flex: 1, background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
                   <select
                     value={selectedProvider} onChange={e => setSelectedProvider(e.target.value)}
-                    style={{ width: '100%', padding: '12px 14px', background: 'transparent', border: 'none', color: selectedProvider ? '#e8f5f0' : '#4a6b5e', fontSize: '14px', outline: 'none', cursor: 'pointer' }}
+                    style={{ width: '100%', padding: '12px 14px', background: 'transparent', border: 'none', color: selectedProvider ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '14px', outline: 'none', cursor: 'pointer' }}
                   >
                     <option value="">Choose a provider...</option>
                     {filteredProviders.map(p => (
@@ -930,7 +986,7 @@ const BookingsPage: React.FC = () => {
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Avatar & Basic Info */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: '#0a1a15', padding: '16px', borderRadius: '12px', border: '1px solid #1e3d30' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: 'var(--input-bg)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)' }}>
               <div style={{
                 width: '50px',
                 height: '50px',
@@ -946,52 +1002,52 @@ const BookingsPage: React.FC = () => {
                 {(providerProfileModal.first_name?.[0] ?? providerProfileModal.company_name?.[0] ?? '?').toUpperCase()}
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '16px', color: '#e8f5f0', fontWeight: 700 }}>
+                <h3 style={{ margin: 0, fontSize: '16px', color: 'var(--text-primary)', fontWeight: 700 }}>
                   {[providerProfileModal.first_name, providerProfileModal.last_name].filter(Boolean).join(' ') || 'Unnamed'}
                 </h3>
-                <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#878787' }}>
+                <p style={{ margin: '2px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
                   {providerProfileModal.company_name || 'Individual Provider'}
                 </p>
               </div>
             </div>
 
             {/* Profile Grid */}
-            <div style={{ background: '#0a1a15', padding: '16px', borderRadius: '12px', border: '1px solid #1e3d30', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ background: 'var(--input-bg)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #1e3d3040', paddingBottom: '8px' }}>
-                <span style={{ fontSize: '13px', color: '#878787' }}>Availability</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Availability</span>
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', gap: '5px',
                   fontSize: '12px', fontWeight: 700,
-                  color: providerProfileModal.is_online ? '#00c896' : '#4a6b5e',
+                  color: providerProfileModal.is_online ? '#00c896' : 'var(--text-muted)',
                 }}>
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: providerProfileModal.is_online ? '#00c896' : '#4a6b5e', display: 'inline-block' }} />
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: providerProfileModal.is_online ? '#00c896' : 'var(--text-muted)', display: 'inline-block' }} />
                   {providerProfileModal.is_online ? 'Online' : 'Offline'}
                 </span>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #1e3d3040', paddingBottom: '8px' }}>
-                <span style={{ fontSize: '13px', color: '#878787' }}>Phone Number</span>
-                <span style={{ fontSize: '13px', color: '#e8f5f0' }}>{providerProfileModal.phone || '—'}</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Phone Number</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{providerProfileModal.phone || '—'}</span>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #1e3d3040', paddingBottom: '8px' }}>
-                <span style={{ fontSize: '13px', color: '#878787' }}>Email Address</span>
-                <span style={{ fontSize: '13px', color: '#e8f5f0' }}>{providerProfileModal.user_email || providerProfileModal.email || '—'}</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Email Address</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{providerProfileModal.user_email || providerProfileModal.email || '—'}</span>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #1e3d3040', paddingBottom: '8px' }}>
-                <span style={{ fontSize: '13px', color: '#878787' }}>Registered Since</span>
-                <span style={{ fontSize: '13px', color: '#e8f5f0' }}>{new Date(providerProfileModal.created_at).toLocaleDateString(undefined, { dateStyle: 'medium' })}</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Registered Since</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{new Date(providerProfileModal.created_at).toLocaleDateString(undefined, { dateStyle: 'medium' })}</span>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #1e3d3040', paddingBottom: '8px' }}>
-                <span style={{ fontSize: '13px', color: '#878787' }}>Approval Status</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Approval Status</span>
                 <Badge variant={statusVariant(providerProfileModal.approval_status)}>{providerProfileModal.approval_status}</Badge>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '13px', color: '#878787' }}>Skills / Categories</span>
-                <span style={{ fontSize: '13px', color: '#e8f5f0', lineHeight: 1.4 }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Skills / Categories</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.4 }}>
                   {providerProfileModal.category_ids?.map(id => categories.find(c => c.id === id)?.name).filter(Boolean).join(', ') || 'None'}
                 </span>
               </div>
@@ -1014,17 +1070,38 @@ const BookingsPage: React.FC = () => {
           footer={
             <>
               <Button variant="ghost" onClick={() => setCreateModal(false)}>Cancel</Button>
-              <Button variant="primary" loading={createLoading} onClick={handleCreateBooking}>Create Order</Button>
+              <Button variant="primary" loading={createLoading} onClick={handleCreateBooking}>Done</Button>
             </>
           }
         >
           <form id="create-booking-form" onSubmit={handleCreateBooking}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Auto Assign Status Banner */}
+              <div style={{
+                padding: '10px 14px',
+                borderRadius: '8px',
+                background: globalAutoAssign ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                border: `1px solid ${globalAutoAssign ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
+                color: globalAutoAssign ? '#10b981' : '#ef4444',
+                fontSize: '13px',
+                fontWeight: 650,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '4px'
+              }}>
+                <span>{globalAutoAssign ? '⚙️ Auto Assignment is ENABLED' : '⚠️ Auto Assignment is DISABLED'}</span>
+                {globalAutoAssign && (
+                  <span style={{ fontSize: '11px', opacity: 0.8, fontWeight: 500 }}>
+                    Radius: {globalAutoAssignRadius} km
+                  </span>
+                )}
+              </div>
               {/* Customer Selection */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                   <label style={{ fontSize: '12px', fontWeight: 600, color: '#878787', textTransform: 'uppercase' }}>Select Customer *</label>
-                   <label style={{ fontSize: '12px', color: '#e8f5f0', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                   <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Select Customer *</label>
+                   <label style={{ fontSize: '12px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
                      <input type="checkbox" checked={isManualCustomer} onChange={e => setIsManualCustomer(e.target.checked)} />
                      New/Manual Customer
                    </label>
@@ -1047,10 +1124,10 @@ const BookingsPage: React.FC = () => {
                       style={{
                         width: '100%',
                         padding: '12px 14px',
-                        background: '#0a1a15',
-                        border: '1px solid #1e3d30',
+                        background: 'var(--input-bg)',
+                        border: '1px solid var(--border)',
                         borderRadius: '10px',
-                        color: '#e8f5f0',
+                        color: 'var(--text-primary)',
                         fontSize: '14px',
                         outline: 'none',
                         boxSizing: 'border-box'
@@ -1095,8 +1172,8 @@ const BookingsPage: React.FC = () => {
                           left: 0,
                           right: 0,
                           marginTop: '6px',
-                          background: '#0d241c',
-                          border: '1px solid #1e3d30',
+                          background: 'var(--surface-raised)',
+                          border: '1px solid var(--border)',
                           borderRadius: '10px',
                           maxHeight: '200px',
                           overflowY: 'auto',
@@ -1104,7 +1181,7 @@ const BookingsPage: React.FC = () => {
                           boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
                         }}>
                           {filteredCustomers.length === 0 ? (
-                            <div style={{ padding: '12px', color: '#878787', fontSize: '13px', textAlign: 'center' }}>
+                            <div style={{ padding: '12px', color: 'var(--text-secondary)', fontSize: '13px', textAlign: 'center' }}>
                               No customers found
                             </div>
                           ) : (
@@ -1120,7 +1197,7 @@ const BookingsPage: React.FC = () => {
                                   }}
                                   style={{
                                     padding: '10px 14px',
-                                    color: '#e8f5f0',
+                                    color: 'var(--text-primary)',
                                     fontSize: '13px',
                                     cursor: 'pointer',
                                     background: isSelected ? '#00674F' : 'transparent',
@@ -1128,14 +1205,14 @@ const BookingsPage: React.FC = () => {
                                     textAlign: 'left'
                                   }}
                                   onMouseEnter={e => {
-                                    if (!isSelected) e.currentTarget.style.background = '#122b22';
+                                    if (!isSelected) e.currentTarget.style.background = 'var(--surface)';
                                   }}
                                   onMouseLeave={e => {
                                     if (!isSelected) e.currentTarget.style.background = 'transparent';
                                   }}
                                 >
                                   <div style={{ fontWeight: 600 }}>{c.display_name || 'No Name'}</div>
-                                  <div style={{ fontSize: '11px', color: isSelected ? '#a7f3d0' : '#878787' }}>
+                                  <div style={{ fontSize: '11px', color: isSelected ? '#a7f3d0' : 'var(--text-secondary)' }}>
                                     Phone: {c.phone || '—'} | Email: {c.email || '—'}
                                   </div>
                                 </div>
@@ -1147,33 +1224,33 @@ const BookingsPage: React.FC = () => {
                     )}
                   </div>
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#0a1a15', padding: '16px', borderRadius: '10px', border: '1px solid #1e3d30' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: 'var(--input-bg)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border)' }}>
                      <div>
-                       <label style={{ display: 'block', fontSize: '11px', color: '#878787', marginBottom: '4px' }}>First Name *</label>
-                       <input required type="text" value={manualCustomer.first_name} onChange={e => setManualCustomer(p => ({ ...p, first_name: e.target.value }))} style={{ width: '100%', padding: '8px 12px', background: '#122b22', border: '1px solid #1e3d30', borderRadius: '6px', color: '#fff', fontSize: '13px' }} />
+                       <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>First Name *</label>
+                       <input required type="text" value={manualCustomer.first_name} onChange={e => setManualCustomer(p => ({ ...p, first_name: e.target.value }))} style={{ width: '100%', padding: '8px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '13px' }} />
                      </div>
                      <div>
-                       <label style={{ display: 'block', fontSize: '11px', color: '#878787', marginBottom: '4px' }}>Last Name</label>
-                       <input type="text" value={manualCustomer.last_name} onChange={e => setManualCustomer(p => ({ ...p, last_name: e.target.value }))} style={{ width: '100%', padding: '8px 12px', background: '#122b22', border: '1px solid #1e3d30', borderRadius: '6px', color: '#fff', fontSize: '13px' }} />
+                       <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Last Name</label>
+                       <input type="text" value={manualCustomer.last_name} onChange={e => setManualCustomer(p => ({ ...p, last_name: e.target.value }))} style={{ width: '100%', padding: '8px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '13px' }} />
                      </div>
                       <div style={{ gridColumn: 'span 2', marginBottom: '-16px' }}>
-                        <label style={{ display: 'block', fontSize: '11px', color: '#878787', marginBottom: '4px' }}>Phone *</label>
+                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Phone *</label>
                         <PhoneInput value={manualCustomer.phone} onChange={val => setManualCustomer(p => ({ ...p, phone: val }))} />
                       </div>
                      <div>
-                       <label style={{ display: 'block', fontSize: '11px', color: '#878787', marginBottom: '4px' }}>Address</label>
-                       <input type="text" value={manualCustomer.address_line1} onChange={e => setManualCustomer(p => ({ ...p, address_line1: e.target.value }))} style={{ width: '100%', padding: '8px 12px', background: '#122b22', border: '1px solid #1e3d30', borderRadius: '6px', color: '#fff', fontSize: '13px' }} />
+                       <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Address</label>
+                       <input type="text" value={manualCustomer.address_line1} onChange={e => setManualCustomer(p => ({ ...p, address_line1: e.target.value }))} style={{ width: '100%', padding: '8px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '13px' }} />
                      </div>
                      <div>
-                       <label style={{ display: 'block', fontSize: '11px', color: '#878787', marginBottom: '4px' }}>City *</label>
-                       <select required value={manualCustomer.city_id} onChange={e => setManualCustomer(p => ({ ...p, city_id: e.target.value, area_id: '' }))} style={{ width: '100%', padding: '8px 12px', background: '#122b22', border: '1px solid #1e3d30', borderRadius: '6px', color: '#fff', fontSize: '13px' }}>
+                       <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>City *</label>
+                       <select required value={manualCustomer.city_id} onChange={e => setManualCustomer(p => ({ ...p, city_id: e.target.value, area_id: '' }))} style={{ width: '100%', padding: '8px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '13px' }}>
                          <option value="">Select City</option>
                          {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                        </select>
                      </div>
                      <div>
-                       <label style={{ display: 'block', fontSize: '11px', color: '#878787', marginBottom: '4px' }}>Area *</label>
-                       <select required value={manualCustomer.area_id} onChange={e => setManualCustomer(p => ({ ...p, area_id: e.target.value }))} disabled={!manualCustomer.city_id} style={{ width: '100%', padding: '8px 12px', background: '#122b22', border: '1px solid #1e3d30', borderRadius: '6px', color: '#fff', fontSize: '13px' }}>
+                       <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Area *</label>
+                       <select required value={manualCustomer.area_id} onChange={e => setManualCustomer(p => ({ ...p, area_id: e.target.value }))} disabled={!manualCustomer.city_id} style={{ width: '100%', padding: '8px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '13px' }}>
                          <option value="">Select Area</option>
                          {areas.map((a: any) => <option key={a.id} value={a.id}>{a.name}</option>)}
                        </select>
@@ -1185,23 +1262,23 @@ const BookingsPage: React.FC = () => {
               {/* Category & Service */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#878787', marginBottom: '8px', textTransform: 'uppercase' }}>Category *</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Category *</label>
                   <select
                     required
                     value={createForm.category_id} onChange={e => setCreateForm(p => ({ ...p, category_id: e.target.value, service_id: '' }))}
-                    style={{ width: '100%', padding: '12px 14px', background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '10px', color: createForm.category_id ? '#e8f5f0' : '#4a6b5e', fontSize: '14px', outline: 'none' }}
+                    style={{ width: '100%', padding: '12px 14px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', color: createForm.category_id ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '14px', outline: 'none' }}
                   >
                     <option value="">Select Category...</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#878787', marginBottom: '8px', textTransform: 'uppercase' }}>Service *</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Service *</label>
                   <select
                     required
                     value={createForm.service_id} onChange={e => setCreateForm(p => ({ ...p, service_id: e.target.value }))}
                     disabled={!createForm.category_id}
-                    style={{ width: '100%', padding: '12px 14px', background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '10px', color: createForm.service_id ? '#e8f5f0' : '#4a6b5e', fontSize: '14px', outline: 'none', opacity: createForm.category_id ? 1 : 0.5 }}
+                    style={{ width: '100%', padding: '12px 14px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', color: createForm.service_id ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '14px', outline: 'none', opacity: createForm.category_id ? 1 : 0.5 }}
                   >
                     <option value="">Select Service...</option>
                     {servicesList.map(s => <option key={s.id} value={s.id}>{s.name} - PKR {s.base_price}</option>)}
@@ -1212,41 +1289,41 @@ const BookingsPage: React.FC = () => {
               {/* Quantity & Date/Time */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#878787', marginBottom: '8px', textTransform: 'uppercase' }}>Quantity</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Quantity</label>
                   <input
                     type="number" min="1" required value={createForm.quantity} onChange={e => setCreateForm(p => ({ ...p, quantity: parseInt(e.target.value) || 1 }))}
-                    style={{ width: '100%', padding: '12px 14px', background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '10px', color: '#e8f5f0', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '12px 14px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#878787', marginBottom: '8px', textTransform: 'uppercase' }}>Date & Time *</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Date & Time *</label>
                   <input
                     type="datetime-local" required value={createForm.scheduled_time} onChange={e => setCreateForm(p => ({ ...p, scheduled_time: e.target.value }))}
-                    style={{ width: '100%', padding: '12px 14px', background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '10px', color: '#e8f5f0', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '12px 14px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
 
               {/* Problem Message */}
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#878787', marginBottom: '8px', textTransform: 'uppercase' }}>Problem Message (Optional)</label>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Problem Message (Optional)</label>
                 <textarea
                   value={createForm.problem_message} onChange={e => setCreateForm(p => ({ ...p, problem_message: e.target.value }))}
                   placeholder="Describe the issue..." rows={3}
-                  style={{ width: '100%', padding: '12px 14px', background: '#0a1a15', border: '1px solid #1e3d30', borderRadius: '10px', color: '#e8f5f0', fontSize: '14px', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
+                  style={{ width: '100%', padding: '12px 14px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
                 />
               </div>
 
               {/* Location Coordinates & Radius */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: '#0a1a15', padding: '16px', borderRadius: '10px', border: '1px solid #1e3d30' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'var(--input-bg)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border)' }}>
                 <div>
-                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#e8f5f0' }}>Service Location & Search Radius</label>
-                  <div style={{ fontSize: '11px', color: '#878787', marginTop: '2px' }}>Set the service location and search radius to request nearby providers</div>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Service Location & Search Radius</label>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>Set the service location and search radius to request nearby providers</div>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px', borderTop: '1px solid #1e3d3040', paddingTop: '12px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#878787', marginBottom: '8px', textTransform: 'uppercase' }}>Search Radius (km) *</label>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Search Radius (km) *</label>
                     <input
                       type="number"
                       min="1"
@@ -1254,12 +1331,12 @@ const BookingsPage: React.FC = () => {
                       required
                       value={createForm.auto_assign_radius}
                       onChange={e => setCreateForm(p => ({ ...p, auto_assign_radius: parseFloat(e.target.value) || 5 }))}
-                      style={{ width: '100%', padding: '10px 12px', background: '#122b22', border: '1px solid #1e3d30', borderRadius: '8px', color: '#fff', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '10px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#878787', marginBottom: '8px', textTransform: 'uppercase' }}>Pin Service Location Coordinates *</label>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Pin Service Location Coordinates *</label>
                     <MapPicker
                       latitude={createForm.latitude}
                       longitude={createForm.longitude}
@@ -1267,23 +1344,23 @@ const BookingsPage: React.FC = () => {
                     />
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '8px' }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '10px', color: '#878787', marginBottom: '4px' }}>Latitude</label>
+                        <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Latitude</label>
                         <input
                           type="number"
                           step="any"
                           value={createForm.latitude || ''}
                           onChange={e => setCreateForm(p => ({ ...p, latitude: parseFloat(e.target.value) || 0 }))}
-                          style={{ width: '100%', padding: '8px 10px', background: '#122b22', border: '1px solid #1e3d30', borderRadius: '6px', color: '#fff', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
+                          style={{ width: '100%', padding: '8px 10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '10px', color: '#878787', marginBottom: '4px' }}>Longitude</label>
+                        <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Longitude</label>
                         <input
                           type="number"
                           step="any"
                           value={createForm.longitude || ''}
                           onChange={e => setCreateForm(p => ({ ...p, longitude: parseFloat(e.target.value) || 0 }))}
-                          style={{ width: '100%', padding: '8px 10px', background: '#122b22', border: '1px solid #1e3d30', borderRadius: '6px', color: '#fff', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
+                          style={{ width: '100%', padding: '8px 10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
                         />
                       </div>
                     </div>
