@@ -180,18 +180,12 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
         <div style={{
           width: '36px',
           height: '36px',
-          borderRadius: '10px',
-          background: '#00674F',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
-          boxShadow: '0 0 16px #00674F50',
         }}>
-          <svg viewBox="0 0 24 24" fill="white" width="20" height="20">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-            <polyline points="9 22 9 12 15 12 15 22" fill="white" stroke="none"/>
-          </svg>
+          <img src="/logo.png" alt="Murammat" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
         </div>
         {!collapsed && (
           <div style={{ animation: 'fadeIn 0.2s ease-out' }}>

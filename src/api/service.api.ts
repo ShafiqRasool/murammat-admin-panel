@@ -7,6 +7,7 @@ export interface ParentCategory {
   name: string;
   description: string | null;
   image_url?: string | null;
+  image_urls?: string[] | null;
   created_at: string;
 }
 
@@ -116,6 +117,16 @@ export const uploadParentCategoryImage = (id: string, file: File) => {
   const formData = new FormData();
   formData.append('image', file);
   return api.post(`/admin/services/parent-categories/${id}/image`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }).then(r => r.data);
+};
+
+export const uploadParentCategoryImages = (id: string, files: File[]) => {
+  const formData = new FormData();
+  files.forEach(file => {
+    formData.append('images', file);
+  });
+  return api.post(`/admin/services/parent-categories/${id}/images`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }).then(r => r.data);
 };

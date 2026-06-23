@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import {
   getCategories, addCategory, updateCategory, deleteCategory, uploadCategoryImage,
   getServices, addService, updateService, deleteService, uploadServiceImage,
-  getParentCategories, addParentCategory, updateParentCategory, deleteParentCategory, uploadParentCategoryImage,
+  getParentCategories, addParentCategory, updateParentCategory, deleteParentCategory, uploadParentCategoryImage, uploadParentCategoryImages,
   type ServiceCategory, type Service, type ParentCategory,
 } from '../api/service.api';
 import Modal from '../components/ui/Modal';
@@ -228,6 +228,8 @@ const ServicesPage: React.FC = () => {
   const [parentCatDesc, setParentCatDesc] = useState('');
   const [parentCatImageFile, setParentCatImageFile] = useState<File | null>(null);
   const [parentCatImagePreview, setParentCatImagePreview] = useState<string | null>(null);
+  const [parentCatImageFiles, setParentCatImageFiles] = useState<File[]>([]);
+  const [parentCatImagePreviews, setParentCatImagePreviews] = useState<string[]>([]);
   const [parentCatSaving, setParentCatSaving] = useState(false);
 
   // ── Category State ──
@@ -349,13 +351,16 @@ const ServicesPage: React.FC = () => {
   }, [tab, loadParentCats, loadCats, loadSvcs]);
 
   // ── Parent Category CRUD ──
-  const openAddParentCat  = () => { setEditParentCat(null); setParentCatName(''); setParentCatDesc(''); setParentCatImageFile(null); setParentCatImagePreview(null); setParentCatModal(true); };
+  const openAddParentCat  = () => { setEditParentCat(null); setParentCatName(''); setParentCatDesc(''); setParentCatImageFile(null); setParentCatImagePreview(null); setParentCatImageFiles([]); setParentCatImagePreviews([]); setParentCatModal(true); };
   const openEditParentCat = (c: ParentCategory) => { 
     setEditParentCat(c); 
     setParentCatName(c.name); 
     setParentCatDesc(c.description ?? ''); 
     setParentCatImagePreview(c.image_url ? (c.image_url.startsWith('http') ? c.image_url : `${mediaBaseUrl}${c.image_url}`) : null);
     setParentCatImageFile(null);
+    const urls = c.image_urls ? c.image_urls.map(url => url.startsWith('http') ? url : `${mediaBaseUrl}${url}`) : [];
+    setParentCatImagePreviews(urls);
+    setParentCatImageFiles([]);
     setParentCatModal(true); 
   };
   const saveParentCat = async () => {
@@ -369,6 +374,9 @@ const ServicesPage: React.FC = () => {
       const parentCatId = editParentCat ? editParentCat.id : res.parent_category?.id;
       if (parentCatImageFile && parentCatId) {
         await uploadParentCategoryImage(parentCatId, parentCatImageFile);
+      }
+      if (parentCatImageFiles.length > 0 && parentCatId) {
+        await uploadParentCategoryImages(parentCatId, parentCatImageFiles);
       }
       toast('Parent category saved'); setParentCatModal(false); loadParentCats(); loadAllParentCats();
     } catch (e: any) { toast(e?.response?.data?.error || 'Failed', 'error'); }
@@ -674,8 +682,9 @@ const ServicesPage: React.FC = () => {
       >
         <Input label="Parent Category Name" value={parentCatName} onChange={setParentCatName} placeholder="e.g. Home Maintenance" required />
         <Textarea label="Description (optional)" value={parentCatDesc} onChange={setParentCatDesc} placeholder="Describe this parent category…" />
+        
         <ImageUploadWithCrop
-          label="Category Image"
+          label="Category Main Image (Shown on landing page cards)"
           currentPreview={parentCatImagePreview}
           onFileReady={handleParentCatImageReady}
           required
@@ -683,6 +692,56 @@ const ServicesPage: React.FC = () => {
           quality={0.85}
           maxDim={1200}
         />
+
+        <div style={{ marginBottom: '16px', marginTop: '16px' }}>
+          <label style={labelStyle}>
+            Category Slider Images (Max 5 swiping banner images)
+          </label>
+          <input
+            type="file"
+            multiple
+            accept="image/*"
+            onChange={(e) => {
+              if (!e.target.files) return;
+              const filesList = Array.from(e.target.files);
+              if (filesList.length > 5) {
+                toast('Maximum 5 images allowed', 'warning');
+                return;
+              }
+              setParentCatImageFiles(filesList);
+              const previews = filesList.map(f => URL.createObjectURL(f));
+              setParentCatImagePreviews(previews);
+            }}
+            style={inputStyle}
+          />
+          {parentCatImagePreviews.length > 0 && (
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
+              {parentCatImagePreviews.map((src, i) => (
+                <div key={i} style={{ position: 'relative', width: '80px', height: '80px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #d1e8f5' }}>
+                  <img src={src} alt={`Preview ${i+1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newPreviews = parentCatImagePreviews.filter((_, idx) => idx !== i);
+                      setParentCatImagePreviews(newPreviews);
+                      const newFiles = parentCatImageFiles.filter((_, idx) => idx !== i);
+                      setParentCatImageFiles(newFiles);
+                    }}
+                    style={{
+                      position: 'absolute', top: '2px', right: '2px',
+                      background: '#dc2626', color: 'white', border: 'none',
+                      borderRadius: '50%', width: '18px', height: '18px',
+                      fontSize: '11px', cursor: 'pointer', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center', lineHeight: 1
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </Modal>
 
       {/* ── Sub Category Modal ── */}

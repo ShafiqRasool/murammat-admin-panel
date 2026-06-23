@@ -156,17 +156,15 @@ const LoginPage: React.FC = () => {
         {/* ── Logo ── */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <div style={{
-            width: '56px', height: '56px',
-            borderRadius: '16px',
-            background: '#00674F',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: '56px',
+            height: '56px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             margin: '0 auto 16px',
-            boxShadow: '0 0 32px #00674F50',
+            flexShrink: 0,
           }}>
-            <svg viewBox="0 0 24 24" fill="white" width="28" height="28">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-              <polyline points="9 22 9 12 15 12 15 22" fill="white" stroke="none"/>
-            </svg>
+            <img src="/logo.png" alt="Murammat" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
           <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 800, color: '#e8f5f0' }}>
             Murammat Admin
