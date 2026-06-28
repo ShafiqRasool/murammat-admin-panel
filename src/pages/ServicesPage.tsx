@@ -791,6 +791,7 @@ const ServicesPage: React.FC = () => {
       <Modal
         isOpen={svcModal} onClose={() => setSvcModal(false)}
         title={editSvc ? 'Edit Service' : 'Add New Service'}
+        width="1000px"
         footer={
           <>
             <Button variant="ghost"   onClick={() => setSvcModal(false)}>Cancel</Button>
@@ -800,125 +801,130 @@ const ServicesPage: React.FC = () => {
           </>
         }
       >
-        {/* ── Basic info ── */}
-        <Divider label="Basic Info" />
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-          {/* Parent Category selector */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+          {/* Left Column: Basic Info & Images */}
           <div>
-            <label style={labelStyle}>
-              Parent Category <span style={{ color: '#dc2626' }}>*</span>
-            </label>
-            <select
-              value={svcParentCatId}
-              onChange={e => {
-                const newVal = e.target.value;
-                setSvcParentCatId(newVal);
-                // Clear selected sub category if it doesn't belong to new parent
-                const selectedCat = allCategories.find(c => c.id === svcCatId);
-                if (selectedCat && selectedCat.parent_category_id !== newVal) {
-                  setSvcCatId('');
-                }
-              }}
-              style={{ ...inputStyle, color: svcParentCatId ? 'var(--text-primary)' : 'var(--text-muted)' }}
-            >
-              <option value="">Select a parent…</option>
-              {allParentCategories.map(pc => (
-                <option key={pc.id} value={pc.id}>{pc.name}</option>
-              ))}
-            </select>
+            <Divider label="Basic Info" />
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+              {/* Parent Category selector */}
+              <div>
+                <label style={labelStyle}>
+                  Parent Category <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <select
+                  value={svcParentCatId}
+                  onChange={e => {
+                    const newVal = e.target.value;
+                    setSvcParentCatId(newVal);
+                    // Clear selected sub category if it doesn't belong to new parent
+                    const selectedCat = allCategories.find(c => c.id === svcCatId);
+                    if (selectedCat && selectedCat.parent_category_id !== newVal) {
+                      setSvcCatId('');
+                    }
+                  }}
+                  style={{ ...inputStyle, color: svcParentCatId ? 'var(--text-primary)' : 'var(--text-muted)' }}
+                >
+                  <option value="">Select a parent…</option>
+                  {allParentCategories.map(pc => (
+                    <option key={pc.id} value={pc.id}>{pc.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Sub Category selector */}
+              <div>
+                <label style={labelStyle}>
+                  Sub Category <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <select
+                  value={svcCatId}
+                  onChange={e => setSvcCatId(e.target.value)}
+                  style={{ ...inputStyle, color: svcCatId ? 'var(--text-primary)' : 'var(--text-muted)' }}
+                  disabled={!svcParentCatId}
+                >
+                  <option value="">Select a sub category…</option>
+                  {allCategories
+                    .filter(c => !svcParentCatId || c.parent_category_id === svcParentCatId)
+                    .map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <Input    label="Service Name"               value={svcName}      onChange={setSvcName}      placeholder="e.g. Pipe Repair" required />
+            <Textarea label="Short Description (5-6 words)" value={svcSmallDesc} onChange={setSvcSmallDesc} placeholder="e.g. Best plumbing service for you" rows={2} />
+            <Textarea label="Full Description (optional)" value={svcDesc}     onChange={setSvcDesc}      placeholder="Detailed description of the service…" rows={4} />
+
+            <div style={{ marginTop: '16px' }}>
+              <ImageUploadWithCrop
+                label="Service Image"
+                currentPreview={svcImagePreview}
+                onFileReady={handleSvcImageReady}
+                maxMB={3}
+                quality={0.80}
+                maxDim={900}
+              />
+            </div>
+
+            <div style={{ marginBottom: '12px', marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--input-bg)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+              <input 
+                type="checkbox" 
+                id="isTopService" 
+                checked={svcIsTop}
+                onChange={(e) => setSvcIsTop(e.target.checked)}
+                style={{ width: '18px', height: '18px', accentColor: '#00674F', cursor: 'pointer' }}
+              />
+              <label htmlFor="isTopService" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer', marginBottom: 0 }}>
+                Mark as Top Service
+              </label>
+            </div>
+
+            <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--input-bg)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+              <input 
+                type="checkbox" 
+                id="canBeRepaired" 
+                checked={svcCanBeRepaired}
+                onChange={(e) => setSvcCanBeRepaired(e.target.checked)}
+                style={{ width: '18px', height: '18px', accentColor: '#e67e22', cursor: 'pointer' }}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <label htmlFor="canBeRepaired" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer', marginBottom: 0 }}>
+                  🔧 Allow Repair Status
+                </label>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Provider can put this service's order into "Repair" mode (max 24h)</span>
+              </div>
+            </div>
           </div>
 
-          {/* Sub Category selector */}
+          {/* Right Column: Pricing & Bullet Lists */}
           <div>
-            <label style={labelStyle}>
-              Sub Category <span style={{ color: '#dc2626' }}>*</span>
-            </label>
-            <select
-              value={svcCatId}
-              onChange={e => setSvcCatId(e.target.value)}
-              style={{ ...inputStyle, color: svcCatId ? 'var(--text-primary)' : 'var(--text-muted)' }}
-              disabled={!svcParentCatId}
-            >
-              <option value="">Select a sub category…</option>
-              {allCategories
-                .filter(c => !svcParentCatId || c.parent_category_id === svcParentCatId)
-                .map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <Divider label="Pricing" />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <Input label="Base Price (PKR)"       type="number" value={svcPrice}    onChange={setSvcPrice}    placeholder="0" />
+              <Input label="Discounted Price (PKR)" type="number" value={svcDiscount} onChange={setSvcDiscount} placeholder="Leave blank if none" />
+            </div>
+
+            {/* What's Included */}
+            <Divider label="What's Included" />
+            <BulletListEditor
+              label="Includes"
+              color="#00674F"
+              items={svcIncludes}
+              onChange={setSvcIncludes}
+              placeholder="e.g. Free site inspection"
+            />
+
+            {/* What's Not Included */}
+            <Divider label="What's Not Included" />
+            <BulletListEditor
+              label="Not Includes"
+              color="#dc2626"
+              items={svcExcludes}
+              onChange={setSvcExcludes}
+              placeholder="e.g. Spare parts cost"
+            />
           </div>
         </div>
-
-        <Input    label="Service Name"               value={svcName}      onChange={setSvcName}      placeholder="e.g. Pipe Repair" required />
-        <Textarea label="Short Description (5-6 words)" value={svcSmallDesc} onChange={setSvcSmallDesc} placeholder="e.g. Best plumbing service for you" rows={2} />
-        <Textarea label="Full Description (optional)" value={svcDesc}     onChange={setSvcDesc}      placeholder="Detailed description of the service…" rows={4} />
-
-        {/* ── Image Upload ── */}
-        <ImageUploadWithCrop
-          label="Service Image"
-          currentPreview={svcImagePreview}
-          onFileReady={handleSvcImageReady}
-          maxMB={3}
-          quality={0.80}
-          maxDim={900}
-        />
-
-        {/* ── Top Service Checkbox ── */}
-        <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--input-bg)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)' }}>
-          <input 
-            type="checkbox" 
-            id="isTopService" 
-            checked={svcIsTop}
-            onChange={(e) => setSvcIsTop(e.target.checked)}
-            style={{ width: '18px', height: '18px', accentColor: '#00674F', cursor: 'pointer' }}
-          />
-          <label htmlFor="isTopService" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer', marginBottom: 0 }}>
-            Mark as Top Service
-          </label>
-        </div>
-
-        {/* ── Repair Checkbox ── */}
-        <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--input-bg)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)' }}>
-          <input 
-            type="checkbox" 
-            id="canBeRepaired" 
-            checked={svcCanBeRepaired}
-            onChange={(e) => setSvcCanBeRepaired(e.target.checked)}
-            style={{ width: '18px', height: '18px', accentColor: '#e67e22', cursor: 'pointer' }}
-          />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <label htmlFor="canBeRepaired" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer', marginBottom: 0 }}>
-              🔧 Allow Repair Status
-            </label>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Provider can put this service's order into "Repair" mode (max 24h)</span>
-          </div>
-        </div>
-
-        {/* ── Pricing ── */}
-        <Divider label="Pricing" />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          <Input label="Base Price (PKR)"       type="number" value={svcPrice}    onChange={setSvcPrice}    placeholder="0" />
-          <Input label="Discounted Price (PKR)" type="number" value={svcDiscount} onChange={setSvcDiscount} placeholder="Leave blank if none" />
-        </div>
-
-        {/* ── What's Included ── */}
-        <Divider label="What's Included" />
-        <BulletListEditor
-          label="Includes"
-          color="#00674F"
-          items={svcIncludes}
-          onChange={setSvcIncludes}
-          placeholder="e.g. Free site inspection"
-        />
-
-        {/* ── What's Not Included ── */}
-        <Divider label="What's Not Included" />
-        <BulletListEditor
-          label="Not Includes"
-          color="#dc2626"
-          items={svcExcludes}
-          onChange={setSvcExcludes}
-          placeholder="e.g. Spare parts cost"
-        />
       </Modal>
 
       {/* ── Delete Confirm Modal ── */}

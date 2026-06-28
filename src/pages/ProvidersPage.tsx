@@ -664,7 +664,7 @@ const ProvidersPage: React.FC = () => {
         onClose={() => { setAddOpen(false); setEditingProvider(null); setForm(emptyForm()); setProfileImageFile(null); setProfileImagePreview(null); setSelectedServices([]); setSelectedCityId(''); setSelectedAreaId(''); }}
         title={editingProvider ? 'Edit Provider' : 'Add New Provider'}
         subtitle={editingProvider ? `Modify profile details for ${providerDisplayName(editingProvider)}` : 'Manually create a service provider account'}
-        width="560px"
+        width="1000px"
         footer={
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
             <Button variant="ghost" onClick={() => { setAddOpen(false); setEditingProvider(null); setForm(emptyForm()); setProfileImageFile(null); setProfileImagePreview(null); setSelectedServices([]); setSelectedCityId(''); setSelectedAreaId(''); }}>
@@ -689,172 +689,180 @@ const ProvidersPage: React.FC = () => {
         }
       >
         <form id="add-provider-form" onSubmit={handleAddProvider}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-            {/* Profile Picture Uploader */}
-            <div>
-              <ImageUploadWithCrop
-                label="Profile Picture"
-                required={!editingProvider}
-                maxMB={2}
-                quality={0.8}
-                currentPreview={profileImagePreview}
-                onFileReady={(file) => {
-                  setProfileImageFile(file);
-                }}
-              />
-            </div>
-
-            {/* Name row */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+            
+            {/* Left Column: Basic Info & Profile Picture */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Profile Picture Uploader */}
               <div>
-                <label style={labelStyle}>First Name</label>
-                <input id="prov-first-name" value={form.first_name} onChange={setField('first_name')} placeholder="Ali" style={inputStyle} />
-              </div>
-              <div>
-                <label style={labelStyle}>Last Name</label>
-                <input id="prov-last-name" value={form.last_name} onChange={setField('last_name')} placeholder="Khan" style={inputStyle} />
-              </div>
-            </div>
-
-            {/* Company Name */}
-            <div>
-              <label style={labelStyle}>Company Name <span style={{ color: '#dc2626' }}>*</span></label>
-              <input id="prov-company" required value={form.company_name} onChange={setField('company_name')} placeholder="Murammat Services" style={inputStyle} />
-            </div>
-
-            {/* CNIC Number */}
-            <div>
-              <label style={labelStyle}>CNIC Number <span style={{ color: '#dc2626' }}>*</span></label>
-              <input
-                id="prov-cnic"
-                required
-                value={form.cnic}
-                onChange={handleCnicChange}
-                placeholder="35201-1234567-1"
-                style={inputStyle}
-              />
-            </div>
-
-            {/* Email */}
-            <div>
-              <label style={labelStyle}>Email</label>
-              <input id="prov-email" type="email" value={form.email} onChange={setField('email')} placeholder="provider@example.com" style={inputStyle} />
-            </div>
-
-            {/* Phone */}
-              <label style={labelStyle}>Phone <span style={{ color: '#dc2626' }}>*</span></label>
-              <PhoneInput value={form.phone || ''} onChange={val => setForm(p => ({ ...p, phone: val }))} />
-
-            {/* Password */}
-            <div>
-              <label style={labelStyle}>
-                Password {editingProvider ? <span style={{ color: 'var(--text-secondary)', textTransform: 'lowercase', fontSize: '11px', fontWeight: 'normal' }}>(leave blank to keep current)</span> : <span style={{ color: '#dc2626' }}>*</span>}
-              </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  id="prov-password"
-                  type={showPassword ? 'text' : 'password'}
+                <ImageUploadWithCrop
+                  label="Profile Picture"
                   required={!editingProvider}
-                  value={form.password || ''}
-                  onChange={setField('password')}
-                  placeholder={editingProvider ? "Leave blank to keep current" : "Min. 8 characters"}
-                  style={{ ...inputStyle, paddingRight: '44px' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(v => !v)}
-                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0 }}
-                >
-                  {showPassword ? (
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="16" height="16">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
-                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
-                      <line x1="1" y1="1" x2="23" y2="23"/>
-                    </svg>
-                  ) : (
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="16" height="16">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                      <circle cx="12" cy="12" r="3"/>
-                    </svg>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Location (City + Area) */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
-              <div>
-                <label style={labelStyle}>City <span style={{ color: '#dc2626' }}>*</span></label>
-                <select
-                  required
-                  id="prov-city"
-                  value={selectedCityId}
-                  onChange={e => {
-                    setSelectedCityId(e.target.value);
-                    setSelectedAreaId('');
+                  maxMB={2}
+                  quality={0.8}
+                  currentPreview={profileImagePreview}
+                  onFileReady={(file) => {
+                    setProfileImageFile(file);
                   }}
-                  style={{ ...inputStyle, cursor: 'pointer' }}
-                >
-                  <option value="">— Select City —</option>
-                  {citiesList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                />
               </div>
+
+              {/* Name row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={labelStyle}>First Name</label>
+                  <input id="prov-first-name" value={form.first_name} onChange={setField('first_name')} placeholder="Ali" style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Last Name</label>
+                  <input id="prov-last-name" value={form.last_name} onChange={setField('last_name')} placeholder="Khan" style={inputStyle} />
+                </div>
+              </div>
+
+              {/* Company Name */}
               <div>
-                <label style={labelStyle}>Area <span style={{ color: '#dc2626' }}>*</span></label>
-                <select
+                <label style={labelStyle}>Company Name <span style={{ color: '#dc2626' }}>*</span></label>
+                <input id="prov-company" required value={form.company_name} onChange={setField('company_name')} placeholder="Murammat Services" style={inputStyle} />
+              </div>
+
+              {/* CNIC Number */}
+              <div>
+                <label style={labelStyle}>CNIC Number <span style={{ color: '#dc2626' }}>*</span></label>
+                <input
+                  id="prov-cnic"
                   required
-                  id="prov-area"
-                  value={selectedAreaId}
-                  onChange={e => setSelectedAreaId(e.target.value)}
-                  disabled={!selectedCityId}
-                  style={{ ...inputStyle, cursor: selectedCityId ? 'pointer' : 'not-allowed', opacity: selectedCityId ? 1 : 0.5 }}
-                >
-                  <option value="">— Select Area —</option>
-                  {areasList.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </select>
+                  value={form.cnic}
+                  onChange={handleCnicChange}
+                  placeholder="35201-1234567-1"
+                  style={inputStyle}
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label style={labelStyle}>Email</label>
+                <input id="prov-email" type="email" value={form.email} onChange={setField('email')} placeholder="provider@example.com" style={inputStyle} />
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label style={labelStyle}>Phone <span style={{ color: '#dc2626' }}>*</span></label>
+                <PhoneInput value={form.phone || ''} onChange={val => setForm(p => ({ ...p, phone: val }))} />
+              </div>
+
+              {/* Password */}
+              <div>
+                <label style={labelStyle}>
+                  Password {editingProvider ? <span style={{ color: 'var(--text-secondary)', textTransform: 'lowercase', fontSize: '11px', fontWeight: 'normal' }}>(leave blank to keep current)</span> : <span style={{ color: '#dc2626' }}>*</span>}
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    id="prov-password"
+                    type={showPassword ? 'text' : 'password'}
+                    required={!editingProvider}
+                    value={form.password || ''}
+                    onChange={setField('password')}
+                    placeholder={editingProvider ? "Leave blank to keep current" : "Min. 8 characters"}
+                    style={{ ...inputStyle, paddingRight: '44px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(v => !v)}
+                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0 }}
+                  >
+                    {showPassword ? (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="16" height="16">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                        <line x1="1" y1="1" x2="23" y2="23"/>
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="16" height="16">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Services checklist */}
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px', marginTop: '4px' }}>
-              <label style={labelStyle}>Select Services / Skills</label>
-              <div style={{ maxHeight: '200px', overflowY: 'auto', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {categories.map(cat => {
-                  const catServices = services.filter(s => s.category_id === cat.id);
-                  if (catServices.length === 0) return null;
-                  return (
-                    <div key={cat.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <span style={{ fontSize: '11px', color: '#00a87a', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        {cat.name}
-                      </span>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                        {catServices.map(s => {
-                          const isChecked = selectedServices.includes(s.id);
-                          return (
-                            <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-primary)' }}>
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={e => {
-                                  if (e.target.checked) {
-                                    setSelectedServices(prev => [...prev, s.id]);
-                                  } else {
-                                    setSelectedServices(prev => prev.filter(id => id !== s.id));
-                                  }
-                                }}
-                                style={{ accentColor: '#00674F', cursor: 'pointer' }}
-                              />
-                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {s.name}
-                              </span>
-                            </label>
-                          );
-                        })}
+            {/* Right Column: Location City/Area & Service Checklist */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Location (City + Area) */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={labelStyle}>City <span style={{ color: '#dc2626' }}>*</span></label>
+                  <select
+                    required
+                    id="prov-city"
+                    value={selectedCityId}
+                    onChange={e => {
+                      setSelectedCityId(e.target.value);
+                      setSelectedAreaId('');
+                    }}
+                    style={{ ...inputStyle, cursor: 'pointer' }}
+                  >
+                    <option value="">— Select City —</option>
+                    {citiesList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Area <span style={{ color: '#dc2626' }}>*</span></label>
+                  <select
+                    required
+                    id="prov-area"
+                    value={selectedAreaId}
+                    onChange={e => setSelectedAreaId(e.target.value)}
+                    disabled={!selectedCityId}
+                    style={{ ...inputStyle, cursor: selectedCityId ? 'pointer' : 'not-allowed', opacity: selectedCityId ? 1 : 0.5 }}
+                  >
+                    <option value="">— Select Area —</option>
+                    {areasList.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Services checklist */}
+              <div>
+                <label style={labelStyle}>Select Services / Skills</label>
+                <div style={{ maxHeight: '420px', overflowY: 'auto', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {categories.map(cat => {
+                    const catServices = services.filter(s => s.category_id === cat.id);
+                    if (catServices.length === 0) return null;
+                    return (
+                      <div key={cat.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <span style={{ fontSize: '11px', color: '#00a87a', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          {cat.name}
+                        </span>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                          {catServices.map(s => {
+                            const isChecked = selectedServices.includes(s.id);
+                            return (
+                              <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-primary)' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={e => {
+                                    if (e.target.checked) {
+                                      setSelectedServices(prev => [...prev, s.id]);
+                                    } else {
+                                      setSelectedServices(prev => prev.filter(id => id !== s.id));
+                                    }
+                                  }}
+                                  style={{ accentColor: '#00674F', cursor: 'pointer' }}
+                                />
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {s.name}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
 

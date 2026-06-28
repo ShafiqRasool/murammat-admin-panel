@@ -1066,7 +1066,7 @@ const BookingsPage: React.FC = () => {
             setCustomerSearch('');
             setShowCustomerDropdown(false);
           }}
-          title="Create Manual Order" subtitle="Create a new order for a customer" width="600px"
+          title="Create Manual Order" subtitle="Create a new order for a customer" width="1000px"
           footer={
             <>
               <Button variant="ghost" onClick={() => setCreateModal(false)}>Cancel</Button>
@@ -1075,293 +1075,300 @@ const BookingsPage: React.FC = () => {
           }
         >
           <form id="create-booking-form" onSubmit={handleCreateBooking}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* Auto Assign Status Banner */}
-              <div style={{
-                padding: '10px 14px',
-                borderRadius: '8px',
-                background: globalAutoAssign ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                border: `1px solid ${globalAutoAssign ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
-                color: globalAutoAssign ? '#10b981' : '#ef4444',
-                fontSize: '13px',
-                fontWeight: 650,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '4px'
-              }}>
-                <span>{globalAutoAssign ? '⚙️ Auto Assignment is ENABLED' : '⚠️ Auto Assignment is DISABLED'}</span>
-                {globalAutoAssign && (
-                  <span style={{ fontSize: '11px', opacity: 0.8, fontWeight: 500 }}>
-                    Radius: {globalAutoAssignRadius} km
-                  </span>
-                )}
-              </div>
-              {/* Customer Selection */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                   <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Select Customer *</label>
-                   <label style={{ fontSize: '12px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                     <input type="checkbox" checked={isManualCustomer} onChange={e => setIsManualCustomer(e.target.checked)} />
-                     New/Manual Customer
-                   </label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+              {/* Left Column: Customer Details & Message */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {/* Auto Assign Status Banner */}
+                <div style={{
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  background: globalAutoAssign ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                  border: `1px solid ${globalAutoAssign ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
+                  color: globalAutoAssign ? '#10b981' : '#ef4444',
+                  fontSize: '13px',
+                  fontWeight: 650,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '4px'
+                }}>
+                  <span>{globalAutoAssign ? '⚙️ Auto Assignment is ENABLED' : '⚠️ Auto Assignment is DISABLED'}</span>
+                  {globalAutoAssign && (
+                    <span style={{ fontSize: '11px', opacity: 0.8, fontWeight: 500 }}>
+                      Radius: {globalAutoAssignRadius} km
+                    </span>
+                  )}
                 </div>
-                
-                {!isManualCustomer ? (
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      type="text"
-                      placeholder="Search customer by name, phone or email..."
-                      value={customerSearch}
-                      onFocus={() => setShowCustomerDropdown(true)}
-                      onChange={e => {
-                        setCustomerSearch(e.target.value);
-                        setShowCustomerDropdown(true);
-                        if (!e.target.value) {
-                          setCreateForm(p => ({ ...p, customer_id: '' }));
-                        }
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '12px 14px',
-                        background: 'var(--input-bg)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '10px',
-                        color: 'var(--text-primary)',
-                        fontSize: '14px',
-                        outline: 'none',
-                        boxSizing: 'border-box'
-                      }}
-                    />
-                    
-                    {createForm.customer_id && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCreateForm(p => ({ ...p, customer_id: '' }));
-                          setCustomerSearch('');
-                          setShowCustomerDropdown(false);
+
+                {/* Customer Selection */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Select Customer *</label>
+                    <label style={{ fontSize: '12px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={isManualCustomer} onChange={e => setIsManualCustomer(e.target.checked)} />
+                      New/Manual Customer
+                    </label>
+                  </div>
+                  
+                  {!isManualCustomer ? (
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="text"
+                        placeholder="Search customer by name, phone or email..."
+                        value={customerSearch}
+                        onFocus={() => setShowCustomerDropdown(true)}
+                        onChange={e => {
+                          setCustomerSearch(e.target.value);
+                          setShowCustomerDropdown(true);
+                          if (!e.target.value) {
+                            setCreateForm(p => ({ ...p, customer_id: '' }));
+                          }
                         }}
                         style={{
-                          position: 'absolute',
-                          right: '12px',
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          background: 'transparent',
-                          border: 'none',
-                          color: '#ef4444',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          fontWeight: 600
-                        }}
-                      >
-                        Clear
-                      </button>
-                    )}
-
-                    {showCustomerDropdown && (
-                      <>
-                        <div 
-                          onClick={() => setShowCustomerDropdown(false)}
-                          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 998 }} 
-                        />
-                        
-                        <div style={{
-                          position: 'absolute',
-                          top: '100%',
-                          left: 0,
-                          right: 0,
-                          marginTop: '6px',
-                          background: 'var(--surface-raised)',
+                          width: '100%',
+                          padding: '12px 14px',
+                          background: 'var(--input-bg)',
                           border: '1px solid var(--border)',
                           borderRadius: '10px',
-                          maxHeight: '200px',
-                          overflowY: 'auto',
-                          zIndex: 999,
-                          boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
-                        }}>
-                          {filteredCustomers.length === 0 ? (
-                            <div style={{ padding: '12px', color: 'var(--text-secondary)', fontSize: '13px', textAlign: 'center' }}>
-                              No customers found
-                            </div>
-                          ) : (
-                            filteredCustomers.map(c => {
-                              const isSelected = createForm.customer_id === c.id;
-                              return (
-                                <div
-                                  key={c.id}
-                                  onClick={() => {
-                                    setCreateForm(p => ({ ...p, customer_id: c.id }));
-                                    setCustomerSearch(`${c.display_name || 'No Name'} (${c.phone || c.email})`);
-                                    setShowCustomerDropdown(false);
-                                  }}
-                                  style={{
-                                    padding: '10px 14px',
-                                    color: 'var(--text-primary)',
-                                    fontSize: '13px',
-                                    cursor: 'pointer',
-                                    background: isSelected ? '#00674F' : 'transparent',
-                                    borderBottom: '1px solid #1e3d3040',
-                                    textAlign: 'left'
-                                  }}
-                                  onMouseEnter={e => {
-                                    if (!isSelected) e.currentTarget.style.background = 'var(--surface)';
-                                  }}
-                                  onMouseLeave={e => {
-                                    if (!isSelected) e.currentTarget.style.background = 'transparent';
-                                  }}
-                                >
-                                  <div style={{ fontWeight: 600 }}>{c.display_name || 'No Name'}</div>
-                                  <div style={{ fontSize: '11px', color: isSelected ? '#a7f3d0' : 'var(--text-secondary)' }}>
-                                    Phone: {c.phone || '—'} | Email: {c.email || '—'}
+                          color: 'var(--text-primary)',
+                          fontSize: '14px',
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                      
+                      {createForm.customer_id && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCreateForm(p => ({ ...p, customer_id: '' }));
+                            setCustomerSearch('');
+                            setShowCustomerDropdown(false);
+                          }}
+                          style={{
+                            position: 'absolute',
+                            right: '12px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#ef4444',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: 600
+                          }}
+                        >
+                          Clear
+                        </button>
+                      )}
+
+                      {showCustomerDropdown && (
+                        <>
+                          <div 
+                            onClick={() => setShowCustomerDropdown(false)}
+                            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 998 }} 
+                          />
+                          
+                          <div style={{
+                            position: 'absolute',
+                            top: '100%',
+                            left: 0,
+                            right: 0,
+                            marginTop: '6px',
+                            background: 'var(--surface-raised)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '10px',
+                            maxHeight: '200px',
+                            overflowY: 'auto',
+                            zIndex: 999,
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
+                          }}>
+                            {filteredCustomers.length === 0 ? (
+                              <div style={{ padding: '12px', color: 'var(--text-secondary)', fontSize: '13px', textAlign: 'center' }}>
+                                No customers found
+                              </div>
+                            ) : (
+                              filteredCustomers.map(c => {
+                                const isSelected = createForm.customer_id === c.id;
+                                return (
+                                  <div
+                                    key={c.id}
+                                    onClick={() => {
+                                      setCreateForm(p => ({ ...p, customer_id: c.id }));
+                                      setCustomerSearch(`${c.display_name || 'No Name'} (${c.phone || c.email})`);
+                                      setShowCustomerDropdown(false);
+                                    }}
+                                    style={{
+                                      padding: '10px 14px',
+                                      color: 'var(--text-primary)',
+                                      fontSize: '13px',
+                                      cursor: 'pointer',
+                                      background: isSelected ? '#00674F' : 'transparent',
+                                      borderBottom: '1px solid #1e3d3040',
+                                      textAlign: 'left'
+                                    }}
+                                    onMouseEnter={e => {
+                                      if (!isSelected) e.currentTarget.style.background = 'var(--surface)';
+                                    }}
+                                    onMouseLeave={e => {
+                                      if (!isSelected) e.currentTarget.style.background = 'transparent';
+                                    }}
+                                  >
+                                    <div style={{ fontWeight: 600 }}>{c.display_name || 'No Name'}</div>
+                                    <div style={{ fontSize: '11px', color: isSelected ? '#a7f3d0' : 'var(--text-secondary)' }}>
+                                      Phone: {c.phone || '—'} | Email: {c.email || '—'}
+                                    </div>
                                   </div>
-                                </div>
-                              );
-                            })
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: 'var(--input-bg)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                     <div>
-                       <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>First Name *</label>
-                       <input required type="text" value={manualCustomer.first_name} onChange={e => setManualCustomer(p => ({ ...p, first_name: e.target.value }))} style={{ width: '100%', padding: '8px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '13px' }} />
-                     </div>
-                     <div>
-                       <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Last Name</label>
-                       <input type="text" value={manualCustomer.last_name} onChange={e => setManualCustomer(p => ({ ...p, last_name: e.target.value }))} style={{ width: '100%', padding: '8px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '13px' }} />
-                     </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: 'var(--input-bg)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>First Name *</label>
+                        <input required type="text" value={manualCustomer.first_name} onChange={e => setManualCustomer(p => ({ ...p, first_name: e.target.value }))} style={{ width: '100%', padding: '8px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '13px' }} />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Last Name</label>
+                        <input type="text" value={manualCustomer.last_name} onChange={e => setManualCustomer(p => ({ ...p, last_name: e.target.value }))} style={{ width: '100%', padding: '8px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '13px' }} />
+                      </div>
                       <div style={{ gridColumn: 'span 2', marginBottom: '-16px' }}>
                         <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Phone *</label>
                         <PhoneInput value={manualCustomer.phone} onChange={val => setManualCustomer(p => ({ ...p, phone: val }))} />
                       </div>
-                     <div>
-                       <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Address</label>
-                       <input type="text" value={manualCustomer.address_line1} onChange={e => setManualCustomer(p => ({ ...p, address_line1: e.target.value }))} style={{ width: '100%', padding: '8px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '13px' }} />
-                     </div>
-                     <div>
-                       <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>City *</label>
-                       <select required value={manualCustomer.city_id} onChange={e => setManualCustomer(p => ({ ...p, city_id: e.target.value, area_id: '' }))} style={{ width: '100%', padding: '8px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '13px' }}>
-                         <option value="">Select City</option>
-                         {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                       </select>
-                     </div>
-                     <div>
-                       <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Area *</label>
-                       <select required value={manualCustomer.area_id} onChange={e => setManualCustomer(p => ({ ...p, area_id: e.target.value }))} disabled={!manualCustomer.city_id} style={{ width: '100%', padding: '8px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '13px' }}>
-                         <option value="">Select Area</option>
-                         {areas.map((a: any) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                       </select>
-                     </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Category & Service */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Category *</label>
-                  <select
-                    required
-                    value={createForm.category_id} onChange={e => setCreateForm(p => ({ ...p, category_id: e.target.value, service_id: '' }))}
-                    style={{ width: '100%', padding: '12px 14px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', color: createForm.category_id ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '14px', outline: 'none' }}
-                  >
-                    <option value="">Select Category...</option>
-                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Service *</label>
-                  <select
-                    required
-                    value={createForm.service_id} onChange={e => setCreateForm(p => ({ ...p, service_id: e.target.value }))}
-                    disabled={!createForm.category_id}
-                    style={{ width: '100%', padding: '12px 14px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', color: createForm.service_id ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '14px', outline: 'none', opacity: createForm.category_id ? 1 : 0.5 }}
-                  >
-                    <option value="">Select Service...</option>
-                    {servicesList.map(s => <option key={s.id} value={s.id}>{s.name} - PKR {s.base_price}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              {/* Quantity & Date/Time */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Quantity</label>
-                  <input
-                    type="number" min="1" required value={createForm.quantity} onChange={e => setCreateForm(p => ({ ...p, quantity: parseInt(e.target.value) || 1 }))}
-                    style={{ width: '100%', padding: '12px 14px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Date & Time *</label>
-                  <input
-                    type="datetime-local" required value={createForm.scheduled_time} onChange={e => setCreateForm(p => ({ ...p, scheduled_time: e.target.value }))}
-                    style={{ width: '100%', padding: '12px 14px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-                  />
-                </div>
-              </div>
-
-              {/* Problem Message */}
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Problem Message (Optional)</label>
-                <textarea
-                  value={createForm.problem_message} onChange={e => setCreateForm(p => ({ ...p, problem_message: e.target.value }))}
-                  placeholder="Describe the issue..." rows={3}
-                  style={{ width: '100%', padding: '12px 14px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
-                />
-              </div>
-
-              {/* Location Coordinates & Radius */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'var(--input-bg)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                <div>
-                  <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Service Location & Search Radius</label>
-                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>Set the service location and search radius to request nearby providers</div>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px', borderTop: '1px solid #1e3d3040', paddingTop: '12px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Search Radius (km) *</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="100"
-                      required
-                      value={createForm.auto_assign_radius}
-                      onChange={e => setCreateForm(p => ({ ...p, auto_assign_radius: parseFloat(e.target.value) || 5 }))}
-                      style={{ width: '100%', padding: '10px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Pin Service Location Coordinates *</label>
-                    <MapPicker
-                      latitude={createForm.latitude}
-                      longitude={createForm.longitude}
-                      onChange={(lat, lng) => setCreateForm(p => ({ ...p, latitude: lat, longitude: lng }))}
-                    />
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '8px' }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Latitude</label>
-                        <input
-                          type="number"
-                          step="any"
-                          value={createForm.latitude || ''}
-                          onChange={e => setCreateForm(p => ({ ...p, latitude: parseFloat(e.target.value) || 0 }))}
-                          style={{ width: '100%', padding: '8px 10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
-                        />
+                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Address</label>
+                        <input type="text" value={manualCustomer.address_line1} onChange={e => setManualCustomer(p => ({ ...p, address_line1: e.target.value }))} style={{ width: '100%', padding: '8px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '13px' }} />
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Longitude</label>
-                        <input
-                          type="number"
-                          step="any"
-                          value={createForm.longitude || ''}
-                          onChange={e => setCreateForm(p => ({ ...p, longitude: parseFloat(e.target.value) || 0 }))}
-                          style={{ width: '100%', padding: '8px 10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
-                        />
+                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>City *</label>
+                        <select required value={manualCustomer.city_id} onChange={e => setManualCustomer(p => ({ ...p, city_id: e.target.value, area_id: '' }))} style={{ width: '100%', padding: '8px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '13px' }}>
+                          <option value="">Select City</option>
+                          {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Area *</label>
+                        <select required value={manualCustomer.area_id} onChange={e => setManualCustomer(p => ({ ...p, area_id: e.target.value }))} disabled={!manualCustomer.city_id} style={{ width: '100%', padding: '8px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '13px' }}>
+                          <option value="">Select Area</option>
+                          {areas.map((a: any) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Problem Message */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Problem Message (Optional)</label>
+                  <textarea
+                    value={createForm.problem_message} onChange={e => setCreateForm(p => ({ ...p, problem_message: e.target.value }))}
+                    placeholder="Describe the issue..." rows={4}
+                    style={{ width: '100%', padding: '12px 14px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
+                  />
+                </div>
+              </div>
+
+              {/* Right Column: Service details & Coordinates */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {/* Category & Service */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Category *</label>
+                    <select
+                      required
+                      value={createForm.category_id} onChange={e => setCreateForm(p => ({ ...p, category_id: e.target.value, service_id: '' }))}
+                      style={{ width: '100%', padding: '12px 14px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', color: createForm.category_id ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '14px', outline: 'none' }}
+                    >
+                      <option value="">Select Category...</option>
+                      {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Service *</label>
+                    <select
+                      required
+                      value={createForm.service_id} onChange={e => setCreateForm(p => ({ ...p, service_id: e.target.value }))}
+                      disabled={!createForm.category_id}
+                      style={{ width: '100%', padding: '12px 14px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', color: createForm.service_id ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '14px', outline: 'none', opacity: createForm.category_id ? 1 : 0.5 }}
+                    >
+                      <option value="">Select Service...</option>
+                      {servicesList.map(s => <option key={s.id} value={s.id}>{s.name} - PKR {s.base_price}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Quantity & Date/Time */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Quantity</label>
+                    <input
+                      type="number" min="1" required value={createForm.quantity} onChange={e => setCreateForm(p => ({ ...p, quantity: parseInt(e.target.value) || 1 }))}
+                      style={{ width: '100%', padding: '12px 14px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Date & Time *</label>
+                    <input
+                      type="datetime-local" required value={createForm.scheduled_time} onChange={e => setCreateForm(p => ({ ...p, scheduled_time: e.target.value }))}
+                      style={{ width: '100%', padding: '12px 14px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Location Coordinates & Radius */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'var(--input-bg)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                  <div>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Service Location & Search Radius</label>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>Set the service location and search radius to request nearby providers</div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px', borderTop: '1px solid #1e3d3040', paddingTop: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Search Radius (km) *</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        required
+                        value={createForm.auto_assign_radius}
+                        onChange={e => setCreateForm(p => ({ ...p, auto_assign_radius: parseFloat(e.target.value) || 5 }))}
+                        style={{ width: '100%', padding: '10px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Pin Service Location Coordinates *</label>
+                      <MapPicker
+                        latitude={createForm.latitude}
+                        longitude={createForm.longitude}
+                        onChange={(lat, lng) => setCreateForm(p => ({ ...p, latitude: lat, longitude: lng }))}
+                      />
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '8px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Latitude</label>
+                          <input
+                            type="number"
+                            step="any"
+                            value={createForm.latitude || ''}
+                            onChange={e => setCreateForm(p => ({ ...p, latitude: parseFloat(e.target.value) || 0 }))}
+                            style={{ width: '100%', padding: '8px 10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Longitude</label>
+                          <input
+                            type="number"
+                            step="any"
+                            value={createForm.longitude || ''}
+                            onChange={e => setCreateForm(p => ({ ...p, longitude: parseFloat(e.target.value) || 0 }))}
+                            style={{ width: '100%', padding: '8px 10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>

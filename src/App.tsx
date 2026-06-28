@@ -18,6 +18,7 @@ import BlogsPage from './pages/BlogsPage';
 import CallRequestsPage from './pages/CallRequestsPage';
 import BusinessInquiriesPage from './pages/BusinessInquiriesPage';
 import RolesAndStaffPage from './pages/RolesAndStaffPage';
+import PagesPage from './pages/PagesPage';
 
 import Button from './components/ui/Button';
 
@@ -166,6 +167,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute permission="view_blogs">
             <Layout><BlogsPage /></Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pages"
+        element={
+          <ProtectedRoute permission="view_blogs">
+            <Layout><PagesPage /></Layout>
           </ProtectedRoute>
         }
       />
