@@ -46,11 +46,16 @@ const Field: React.FC<{
           let val = e.target.value;
           if (isPhone) {
             val = val.replace(/\D/g, '');
+            if (val.startsWith('92')) {
+              val = '0' + val.substring(2);
+            } else if (val.startsWith('0092')) {
+              val = '0' + val.substring(4);
+            }
           }
           onChange(val);
         }}
         placeholder={placeholder}
-        maxLength={isPhone ? 11 : undefined}
+        maxLength={isPhone ? (value.startsWith('0') ? 11 : 10) : undefined}
         style={{
           width: '100%',
           padding: isPhone ? '11px 14px' : '11px 14px 11px 40px',
@@ -80,6 +85,14 @@ const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const navigate  = useNavigate();
 
+  React.useEffect(() => {
+    const originalTheme = localStorage.getItem('hsl-admin-theme') || 'light';
+    document.documentElement.setAttribute('data-theme', 'dark');
+    return () => {
+      document.documentElement.setAttribute('data-theme', originalTheme);
+    };
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -89,8 +102,19 @@ const LoginPage: React.FC = () => {
       return;
     }
 
-    const phoneRegex = /^(03|3)\d{9}$/;
-    if (!phoneRegex.test(phone.trim())) {
+    let formattedPhone = phone.trim().replace(/\D/g, '');
+    if (formattedPhone.startsWith('92')) {
+      formattedPhone = '0' + formattedPhone.substring(2);
+    }
+    if (formattedPhone.startsWith('0092')) {
+      formattedPhone = '0' + formattedPhone.substring(4);
+    }
+    if (!formattedPhone.startsWith('0') && formattedPhone.startsWith('3') && formattedPhone.length === 10) {
+      formattedPhone = '0' + formattedPhone;
+    }
+
+    const phoneRegex = /^03\d{9}$/;
+    if (!phoneRegex.test(formattedPhone)) {
       setError('Please enter a valid Pakistani phone number (e.g. 3001234567 or 03001234567).');
       return;
     }
@@ -102,13 +126,6 @@ const LoginPage: React.FC = () => {
 
     try {
       setLoading(true);
-      
-      // Clean to Pakistani standard format
-      let formattedPhone = phone.trim();
-      if (formattedPhone.startsWith('3') && formattedPhone.length === 10) {
-        formattedPhone = '0' + formattedPhone;
-      }
-
       await login(formattedPhone, password, isMasterAdmin ? secret : undefined);
       navigate('/dashboard');
     } catch (err: any) {

@@ -5,13 +5,14 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 import { getCities, getAreas } from '../api/location.api';
-import { getCategories, getServices } from '../api/service.api';
+import { getCategories, getServices, getParentCategories } from '../api/service.api';
 import { getProviders } from '../api/provider.api';
 import { getAdminBookings } from '../api/booking.api';
 import { getCustomers } from '../api/customer.api';
 import { getComplaints } from '../api/complaint.api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import Modal from '../components/ui/Modal';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
 const fmt = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
@@ -194,6 +195,7 @@ const DashboardPage: React.FC = () => {
     totalCustomers: 0, totalBookings: 0, pendingBookings: 0,
     completedBookings: 0, cancelledBookings: 0, totalRevenue: 0,
     openComplaints: 0,
+    todaysBookings: 0,
   });
   const [rawBookings, setRawBookings] = useState<any[]>([]);
 
@@ -207,10 +209,103 @@ const DashboardPage: React.FC = () => {
   const [statusStart, setStatusStart] = useState('');
   const [statusEnd, setStatusEnd] = useState('');
 
+  // Category breakdown states
+  const [breakdownModalOpen, setBreakdownModalOpen] = useState(false);
+  const [breakdownRange, setBreakdownRange] = useState('today');
+  const [breakdownStart, setBreakdownStart] = useState('');
+  const [breakdownEnd, setBreakdownEnd] = useState('');
+  const [allCategories, setAllCategories] = useState<any[]>([]);
+  const [parentCategories, setParentCategories] = useState<any[]>([]);
+  const [selectedParentCategory, setSelectedParentCategory] = useState<string>('all');
+
   const [recentBookings, setRecentBookings] = useState<any[]>([]);
   const [bookingStatusData, setBookingStatusData] = useState<any[]>([]);
   const [monthlyData, setMonthlyData] = useState<any[]>([]);
   const [providerApprovalData, setProviderApprovalData] = useState<any[]>([]);
+
+  const getCategoryBreakdown = () => {
+    const now = new Date();
+    let startDate = new Date();
+    let endDate = new Date();
+
+    if (breakdownRange === 'today') {
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
+    } else if (breakdownRange === '7days') {
+      startDate.setDate(now.getDate() - 7);
+      startDate.setHours(0, 0, 0, 0);
+    } else if (breakdownRange === '20days') {
+      startDate.setDate(now.getDate() - 20);
+      startDate.setHours(0, 0, 0, 0);
+    } else if (breakdownRange === '30days') {
+      startDate.setMonth(now.getMonth() - 1);
+      startDate.setHours(0, 0, 0, 0);
+    } else if (breakdownRange === '90days') {
+      startDate.setMonth(now.getMonth() - 3);
+      startDate.setHours(0, 0, 0, 0);
+    } else if (breakdownRange === 'custom') {
+      if (breakdownStart) {
+        startDate = new Date(breakdownStart);
+        startDate.setHours(0, 0, 0, 0);
+      } else {
+        startDate = new Date(0);
+      }
+      if (breakdownEnd) {
+        endDate = new Date(breakdownEnd);
+        endDate.setHours(23, 59, 59, 999);
+      } else {
+        endDate = new Date();
+      }
+    } else {
+      startDate = new Date(0);
+      endDate = new Date();
+    }
+
+    const filteredBookings = rawBookings.filter(b => {
+      const d = new Date(b.created_at);
+      return d >= startDate && d <= endDate;
+    });
+
+    const categoryCounts: Record<string, number> = {};
+
+    filteredBookings.forEach(b => {
+      if (b.items && Array.isArray(b.items)) {
+        const uniqueCatIds = new Set<string>();
+        b.items.forEach((item: any) => {
+          if (item.category_id) {
+            uniqueCatIds.add(item.category_id);
+          }
+        });
+        uniqueCatIds.forEach(catId => {
+          categoryCounts[catId] = (categoryCounts[catId] || 0) + 1;
+        });
+      }
+    });
+
+    const list = allCategories
+      .filter(cat => selectedParentCategory === 'all' || cat.parent_category_id === selectedParentCategory)
+      .map(cat => {
+        return {
+          id: cat.id,
+          name: cat.name,
+          count: categoryCounts[cat.id] || 0
+        };
+      });
+
+    if (selectedParentCategory === 'all') {
+      Object.keys(categoryCounts).forEach(catId => {
+        if (!list.some(x => x.id === catId)) {
+          list.push({
+            id: catId,
+            name: 'Unknown Category',
+            count: categoryCounts[catId]
+          });
+        }
+      });
+    }
+
+    return list.sort((a, b) => b.count - a.count);
+  };
 
   const isSuper = user?.roles?.includes('super-admin');
   const can = (p: string) => isSuper || user?.permissions?.includes(p) || false;
@@ -229,9 +324,10 @@ const DashboardPage: React.FC = () => {
         can('view_services') ? getCategories() : Promise.resolve([]),
         can('view_services') ? getServices() : Promise.resolve([]),
         can('view_providers') ? getProviders() : Promise.resolve([]),
-        can('view_bookings') ? getAdminBookings({ limit: 1000 }) : Promise.resolve({ data: [], total: 0 }), // increased limit for better filtering range
+        can('view_bookings') ? getAdminBookings({ limit: 1000 }) : Promise.resolve({ data: [], total: 0 }),
         can('view_customers') ? getCustomers({ limit: 1 }) : Promise.resolve({ data: [], total: 0, totalSpent: 0, totalBookings: 0 }),
         can('view_complaints') ? getComplaints({ limit: 200 }) : Promise.resolve({ data: [], total: 0 }),
+        can('view_services') ? getParentCategories() : Promise.resolve([]),
       ]);
 
       const cities = results[0].status === 'fulfilled' ? (Array.isArray(results[0].value) ? results[0].value : (results[0].value as any)?.data ?? []) : [];
@@ -245,6 +341,8 @@ const DashboardPage: React.FC = () => {
       const customersRes = results[6].status === 'fulfilled' ? results[6].value : { total: 0, totalSpent: 0 };
       const complaintsRes = results[7].status === 'fulfilled' ? results[7].value : { data: [] };
       const complaintsList: any[] = (complaintsRes as any)?.data ?? [];
+      const parentCategoriesRes = results[8]?.status === 'fulfilled' ? results[8].value : [];
+      const parentCategoriesList = Array.isArray(parentCategoriesRes) ? parentCategoriesRes : (parentCategoriesRes as any)?.data ?? [];
 
       // Compute stats
       const isCompleted = (status: string) => ['completed', 'Rated & Reviewed', 'Work Done'].includes(status);
@@ -256,6 +354,16 @@ const DashboardPage: React.FC = () => {
       const cancelled = bookingsList.filter(b => isCancelled(b.status)).length;
       const revenue = bookingsList.filter(b => isCompleted(b.status)).reduce((s, b) => s + (Number(b.total_amount) || 0), 0);
       const openComplaints = complaintsList.filter(c => c.status === 'open' || c.status === 'pending').length;
+
+      // Filter today's bookings
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+      const todaysCount = bookingsList.filter(b => {
+        const d = new Date(b.created_at);
+        return d >= todayStart && d <= todayEnd;
+      }).length;
 
       setStats({
         cities: (cities as any[]).length,
@@ -272,11 +380,14 @@ const DashboardPage: React.FC = () => {
         cancelledBookings: cancelled,
         totalRevenue: revenue,
         openComplaints,
+        todaysBookings: todaysCount,
       });
 
       // Recent bookings (last 5)
       setRecentBookings(bookingsList.slice(0, 6));
       setRawBookings(bookingsList);
+      setAllCategories(categories);
+      setParentCategories(parentCategoriesList);
 
       // Provider approval bar
       setProviderApprovalData([
@@ -560,7 +671,8 @@ const DashboardPage: React.FC = () => {
       {/* ── Top Stats — Bookings & Revenue ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '20px' }}>
         {can('view_bookings') && <>
-          <StatCard title="Total Bookings" value={loading ? '—' : fmt(stats.totalBookings)} subtitle="All time" icon={ICONS.book} color="#00674F" onClick={() => navigate('/bookings')} />
+          <StatCard title="Total Bookings" value={loading ? '—' : fmt(stats.totalBookings)} subtitle="All time" icon={ICONS.book} color="#00674F" onClick={() => setBreakdownModalOpen(true)} />
+          <StatCard title="Today's Bookings" value={loading ? '—' : fmt(stats.todaysBookings)} subtitle="Booked today" icon={ICONS.clock} color="#00674F" onClick={() => { setBreakdownRange('today'); setBreakdownModalOpen(true); }} />
           <StatCard title="Pending" value={loading ? '—' : fmt(stats.pendingBookings)} subtitle="Awaiting assignment" icon={ICONS.clock} color="#d97706" trend={stats.pendingBookings > 0 ? `${stats.pendingBookings} new` : undefined} trendUp={false} onClick={() => navigate('/bookings')} />
           <StatCard title="Completed" value={loading ? '—' : fmt(stats.completedBookings)} subtitle="Successfully done" icon={ICONS.check} color="#16a34a" onClick={() => navigate('/bookings')} />
           <StatCard title="Total Revenue" value={loading ? '—' : fmtCurrency(stats.totalRevenue)} subtitle="From completed bookings" icon={ICONS.money} color="#8b5cf6" onClick={() => navigate('/commissions')} />
@@ -726,6 +838,211 @@ const DashboardPage: React.FC = () => {
             </button>
           </div>
         </ChartCard>
+      )}
+
+      {breakdownModalOpen && (
+        <Modal
+          isOpen={breakdownModalOpen}
+          onClose={() => setBreakdownModalOpen(false)}
+          title="Bookings Breakdown by Category"
+          subtitle="View booking counts for each category"
+          width="600px"
+          footer={
+            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+              <button
+                onClick={() => {
+                  setBreakdownModalOpen(false);
+                  navigate('/bookings');
+                }}
+                style={{
+                  fontSize: '13px',
+                  color: '#00674F',
+                  background: 'none',
+                  border: '1px solid #00674F40',
+                  borderRadius: '8px',
+                  padding: '8px 16px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  transition: 'all 0.15s',
+                }}
+              >
+                View Bookings List →
+              </button>
+              <button
+                onClick={() => setBreakdownModalOpen(false)}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border)',
+                  background: 'var(--surface-hover)',
+                  color: 'var(--text-primary)',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
+            </div>
+          }
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Date range filter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', background: 'var(--input-bg)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Select Period:</span>
+              <select
+                value={breakdownRange}
+                onChange={(e) => setBreakdownRange(e.target.value)}
+                style={{
+                  padding: '6px 12px',
+                  background: 'var(--card-bg)',
+                  border: '1px solid var(--card-border)',
+                  borderRadius: '8px',
+                  color: 'var(--text-primary)',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  outline: 'none',
+                }}
+              >
+                <option value="today">Today</option>
+                <option value="7days">Last 7 Days</option>
+                <option value="20days">Last 20 Days</option>
+                <option value="1month">Last 1 Month</option>
+                <option value="3months">Last 3 Months</option>
+                <option value="custom">Custom Range</option>
+              </select>
+
+              {breakdownRange === 'custom' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <input
+                    type="date"
+                    value={breakdownStart}
+                    onChange={(e) => setBreakdownStart(e.target.value)}
+                    style={{
+                      padding: '5px 8px',
+                      background: 'var(--card-bg)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '8px',
+                      color: 'var(--text-primary)',
+                      fontSize: '12px',
+                      outline: 'none',
+                    }}
+                  />
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>to</span>
+                  <input
+                    type="date"
+                    value={breakdownEnd}
+                    onChange={(e) => setBreakdownEnd(e.target.value)}
+                    style={{
+                      padding: '5px 8px',
+                      background: 'var(--card-bg)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '8px',
+                      color: 'var(--text-primary)',
+                      fontSize: '12px',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Parent Category chips */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'var(--input-bg)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Parent Category:</span>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedParentCategory('all')}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    border: '1px solid ' + (selectedParentCategory === 'all' ? '#00674F' : 'var(--border)'),
+                    background: selectedParentCategory === 'all' ? '#00674F' : 'var(--card-bg)',
+                    color: selectedParentCategory === 'all' ? '#fff' : 'var(--text-primary)',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  All Categories
+                </button>
+                {parentCategories.map(pc => (
+                  <button
+                    key={pc.id}
+                    type="button"
+                    onClick={() => setSelectedParentCategory(pc.id)}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '20px',
+                      border: '1px solid ' + (selectedParentCategory === pc.id ? '#00674F' : 'var(--border)'),
+                      background: selectedParentCategory === pc.id ? '#00674F' : 'var(--card-bg)',
+                      color: selectedParentCategory === pc.id ? '#fff' : 'var(--text-primary)',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {pc.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* List of categories and bookings */}
+            <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--table-header-bg)' }}>
+                <div style={{ flex: 2, fontSize: '11px', fontWeight: 700, color: 'var(--table-header-text)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Service Category
+                </div>
+                <div style={{ flex: 1, fontSize: '11px', fontWeight: 700, color: 'var(--table-header-text)', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'right' }}>
+                  Booking Count
+                </div>
+              </div>
+
+              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                {getCategoryBreakdown().length === 0 ? (
+                  <div style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    No bookings found for the selected range.
+                  </div>
+                ) : (
+                  getCategoryBreakdown().map((item, idx, arr) => (
+                    <div
+                      key={item.id}
+                      style={{
+                        display: 'flex',
+                        padding: '12px 16px',
+                        borderBottom: idx < arr.length - 1 ? '1px solid var(--border)' : 'none',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <div style={{ flex: 2, fontSize: '13px', color: 'var(--text-primary)', fontWeight: 600 }}>
+                        {item.name}
+                      </div>
+                      <div style={{ flex: 1, textAlign: 'right' }}>
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            padding: '2px 10px',
+                            borderRadius: '12px',
+                            background: item.count > 0 ? '#00674F20' : 'var(--border)',
+                            color: item.count > 0 ? '#00674F' : 'var(--text-secondary)',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                          }}
+                        >
+                          {item.count}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </Modal>
       )}
 
     </div>

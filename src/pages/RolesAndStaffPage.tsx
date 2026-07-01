@@ -493,7 +493,17 @@ const RolesAndStaffPage: React.FC = () => {
                 display_name: [s.first_name, s.last_name].filter(Boolean).join(' ') || '—'
               }))}
               onEdit={openEditStaff}
-              onDelete={r => confirmDelete(r, 'staff')}
+              actions={(s) => {
+                const isSuperAdmin = s.role_name?.toLowerCase() === 'super-admin';
+                return (
+                  <>
+                    <Button variant="secondary" size="sm" onClick={() => openEditStaff(s)}>Edit</Button>
+                    {!isSuperAdmin && (
+                      <Button variant="danger" size="sm" onClick={() => confirmDelete(s, 'staff')}>Del</Button>
+                    )}
+                  </>
+                );
+              }}
               emptyText="No staff team members registered yet."
             />
           )}
