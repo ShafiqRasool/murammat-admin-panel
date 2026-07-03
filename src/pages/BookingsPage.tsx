@@ -421,7 +421,7 @@ const BookingsPage: React.FC = () => {
                       background: 'var(--surface)', 
                       border: '1px solid var(--border)', 
                       borderRadius: '6px', 
-                      color: '#fff', 
+                      color: 'var(--text-primary)', 
                       fontSize: '12px',
                       textAlign: 'center',
                       outline: 'none'
