@@ -19,7 +19,7 @@ const TABS: { key: FilterTab; label: string; color?: string }[] = [
   { key: 'approved',   label: 'Approved',       color: '#00674F' },
   { key: 'rejected',   label: 'Rejected',       color: '#dc2626' },
   { key: 'online',     label: '🟢 Online',       color: '#00c896' },
-  { key: 'offline',    label: '⚫ Offline',       color: 'var(--text-muted)' },
+  { key: 'offline',    label: '🔴 Offline',       color: '#dc2626' },
 ];
 
 const inputStyle: React.CSSProperties = {
@@ -459,11 +459,11 @@ const ProvidersPage: React.FC = () => {
                   <span style={{
                     display: 'inline-flex', alignItems: 'center', gap: '5px',
                     padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700,
-                    background: p.is_online ? '#00c89618' : '#4a6b5e18',
-                    color: p.is_online ? '#00c896' : 'var(--text-muted)',
-                    border: `1px solid ${p.is_online ? '#00c89640' : '#4a6b5e40'}`,
+                    background: p.is_online ? '#00c89618' : '#dc262618',
+                    color: p.is_online ? '#00c896' : '#dc2626',
+                    border: `1px solid ${p.is_online ? '#00c89640' : '#dc262640'}`,
                   }}>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: p.is_online ? '#00c896' : 'var(--text-muted)', display: 'inline-block' }} />
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: p.is_online ? '#00c896' : '#dc2626', display: 'inline-block' }} />
                     {p.is_online ? 'Online' : 'Offline'}
                   </span>
                 </div>

@@ -502,7 +502,7 @@ const BookingsPage: React.FC = () => {
               key={t.key} onClick={() => setStatusTab(t.key)}
               style={{
                 padding: '8px 20px', borderRadius: '8px', border: 'none',
-                background: statusTab === t.key ? (t.color ?? 'var(--surface-raised)') : 'transparent',
+                background: statusTab === t.key ? (t.color ?? '#00674F') : 'transparent',
                 color: statusTab === t.key ? '#fff' : 'var(--text-secondary)',
                 fontWeight: statusTab === t.key ? 600 : 500,
                 fontSize: '13px', cursor: 'pointer', transition: 'all 0.15s',
@@ -847,7 +847,7 @@ const BookingsPage: React.FC = () => {
                         <option value="">Choose a provider...</option>
                         {filteredProviders.map(p => (
                           <option key={p.provider_id} value={p.provider_id}>
-                            {p.is_online ? '🟢 ' : '⚫ '}
+                            {p.is_online ? '🟢 ' : '🔴 '}
                             {p.first_name || p.company_name} - {p.phone || 'No Phone'}
                           </option>
                         ))}
@@ -946,7 +946,7 @@ const BookingsPage: React.FC = () => {
                     <option value="">Choose a provider...</option>
                     {filteredProviders.map(p => (
                       <option key={p.provider_id} value={p.provider_id}>
-                        {p.is_online ? '🟢 ' : '⚫ '}
+                        {p.is_online ? '🟢 ' : '🔴 '}
                         {p.first_name || p.company_name} - {p.phone || 'No Phone'}
                       </option>
                     ))}

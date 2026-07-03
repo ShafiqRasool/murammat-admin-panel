@@ -262,7 +262,7 @@ const CustomersPage: React.FC = () => {
               key={t.key} onClick={() => setPeriod(t.key as CustomerFilters['period'])}
               style={{
                 padding: '8px 20px', borderRadius: '8px', border: 'none',
-                background: period === t.key ? (t.color ?? 'var(--border)') : 'transparent',
+                background: period === t.key ? (t.color ?? '#00674F') : 'transparent',
                 color: period === t.key ? '#fff' : 'var(--text-secondary)',
                 fontWeight: period === t.key ? 600 : 500,
                 fontSize: '13px', cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap',
