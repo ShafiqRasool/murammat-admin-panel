@@ -49,7 +49,7 @@ export const MapPicker: React.FC<MapPickerProps> = ({
     }
   }, []);
 
-  // Initialize map and marker
+  // Initialize map, marker and autocomplete
   useEffect(() => {
     if (!googleLoaded || !mapContainerRef.current) return;
 
@@ -75,6 +75,28 @@ export const MapPicker: React.FC<MapPickerProps> = ({
     });
     markerInstanceRef.current = marker;
 
+    // Setup Google Autocomplete
+    const searchInput = document.getElementById('map-search-input') as HTMLInputElement;
+    let autocomplete: any = null;
+    if (searchInput) {
+      autocomplete = new google.maps.places.Autocomplete(searchInput, {
+        types: ['geocode', 'establishment'],
+        componentRestrictions: { country: 'pk' }
+      });
+
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (!place.geometry || !place.geometry.location) {
+          return;
+        }
+        const loc = place.geometry.location;
+        map.setCenter(loc);
+        map.setZoom(16);
+        marker.setPosition(loc);
+        onChange(loc.lat(), loc.lng());
+      });
+    }
+
     // Marker drag end listener
     marker.addListener('dragend', () => {
       const pos = marker.getPosition();
@@ -95,6 +117,9 @@ export const MapPicker: React.FC<MapPickerProps> = ({
       if (google.maps.event) {
         google.maps.event.clearInstanceListeners(marker);
         google.maps.event.clearInstanceListeners(map);
+        if (autocomplete) {
+          google.maps.event.clearInstanceListeners(autocomplete);
+        }
       }
       mapInstanceRef.current = null;
       markerInstanceRef.current = null;
@@ -123,36 +148,61 @@ export const MapPicker: React.FC<MapPickerProps> = ({
   }, [latitude, longitude, googleLoaded]);
 
   return (
-    <div style={{ position: 'relative', width: '100%', marginBottom: '12px' }}>
-      <div 
-        ref={mapContainerRef} 
-        style={{ 
-          height: '240px', 
-          width: '100%', 
-          borderRadius: '10px', 
-          border: '1px solid var(--border)',
-          background: 'var(--input-bg)',
-          overflow: 'hidden'
-        }} 
-      />
-      {!googleLoaded && (
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'rgba(10, 26, 21, 0.8)',
-          color: 'var(--text-primary)',
-          borderRadius: '10px',
-          fontSize: '13px'
-        }}>
-          Loading Map Picker...
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', marginBottom: '12px' }}>
+      {googleLoaded && (
+        <div style={{ position: 'relative' }}>
+          <input
+            id="map-search-input"
+            type="text"
+            placeholder="Search location (e.g., DHA Lahore, Gulberg)..."
+            style={{
+              width: '100%',
+              padding: '10px 14px',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
+              color: 'var(--text-primary)',
+              fontSize: '13px',
+              outline: 'none',
+              boxSizing: 'border-box'
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.preventDefault();
+            }}
+          />
         </div>
       )}
+      <div style={{ position: 'relative', width: '100%' }}>
+        <div 
+          ref={mapContainerRef} 
+          style={{ 
+            height: '240px', 
+            width: '100%', 
+            borderRadius: '10px', 
+            border: '1px solid var(--border)',
+            background: 'var(--input-bg)',
+            overflow: 'hidden'
+          }} 
+        />
+        {!googleLoaded && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(10, 26, 21, 0.8)',
+            color: 'var(--text-primary)',
+            borderRadius: '10px',
+            fontSize: '13px'
+          }}>
+            Loading Map Picker...
+          </div>
+        )}
+      </div>
     </div>
   );
 };

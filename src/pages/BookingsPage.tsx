@@ -1323,53 +1323,17 @@ const BookingsPage: React.FC = () => {
                 {/* Location Coordinates & Radius */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'var(--input-bg)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border)' }}>
                   <div>
-                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Service Location & Search Radius</label>
-                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>Set the service location and search radius to request nearby providers</div>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Service Location</label>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>Search a location and pin the exact spot on the map</div>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px', borderTop: '1px solid #1e3d3040', paddingTop: '12px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Search Radius (km) *</label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="100"
-                        required
-                        value={createForm.auto_assign_radius}
-                        onChange={e => setCreateForm(p => ({ ...p, auto_assign_radius: parseFloat(e.target.value) || 5 }))}
-                        style={{ width: '100%', padding: '10px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Pin Service Location Coordinates *</label>
                       <MapPicker
                         latitude={createForm.latitude}
                         longitude={createForm.longitude}
                         onChange={(lat, lng) => setCreateForm(p => ({ ...p, latitude: lat, longitude: lng }))}
                       />
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '8px' }}>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Latitude</label>
-                          <input
-                            type="number"
-                            step="any"
-                            value={createForm.latitude || ''}
-                            onChange={e => setCreateForm(p => ({ ...p, latitude: parseFloat(e.target.value) || 0 }))}
-                            style={{ width: '100%', padding: '8px 10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
-                          />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Longitude</label>
-                          <input
-                            type="number"
-                            step="any"
-                            value={createForm.longitude || ''}
-                            onChange={e => setCreateForm(p => ({ ...p, longitude: parseFloat(e.target.value) || 0 }))}
-                            style={{ width: '100%', padding: '8px 10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
-                          />
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </div>
