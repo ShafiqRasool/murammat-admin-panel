@@ -72,6 +72,7 @@ const BookingsPage: React.FC = () => {
   const [providerOnlineFilter, setProviderOnlineFilter] = useState<'all' | 'online' | 'offline'>('all');
   const [providerCategoryFilter, setProviderCategoryFilter] = useState<string>('all');
   const [providerCityFilter, setProviderCityFilter] = useState<string>('all');
+  const [filterByBookingArea, setFilterByBookingArea] = useState(true);
   const [cities, setCities] = useState<City[]>([]);
   const [globalAutoAssign, setGlobalAutoAssign] = useState(false);
   const [globalAutoAssignRadius, setGlobalAutoAssignRadius] = useState<number>(5);
@@ -247,10 +248,15 @@ const BookingsPage: React.FC = () => {
       if (providerCityFilter !== 'all' && p.city_ids) {
         if (!p.city_ids.includes(providerCityFilter)) return false;
       }
+
+      // 4. Area Filter (based on assignModal booking area)
+      if (filterByBookingArea && assignModal && assignModal.area_id) {
+        if (!p.area_ids || !p.area_ids.includes(assignModal.area_id)) return false;
+      }
       
       return true;
     });
-  }, [providers, providerOnlineFilter, providerCategoryFilter, providerCityFilter]);
+  }, [providers, providerOnlineFilter, providerCategoryFilter, providerCityFilter, filterByBookingArea, assignModal]);
 
   const filteredCustomers = React.useMemo(() => {
     if (!customerSearch.trim()) return customersList;
@@ -930,6 +936,21 @@ const BookingsPage: React.FC = () => {
                   {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
+
+              {assignModal.area_name && (
+                <div style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                  <input
+                    type="checkbox"
+                    id="filter-booking-area-chk"
+                    checked={filterByBookingArea}
+                    onChange={e => setFilterByBookingArea(e.target.checked)}
+                    style={{ accentColor: '#00674F', cursor: 'pointer' }}
+                  />
+                  <label htmlFor="filter-booking-area-chk" style={{ fontSize: '13px', color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none' }}>
+                    Only show providers working in booking area: <strong>{assignModal.area_name}</strong>
+                  </label>
+                </div>
+              )}
             </div>
 
             {/* Provider Select */}

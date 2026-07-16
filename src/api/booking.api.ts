@@ -25,6 +25,10 @@ export interface Booking {
   items: BookingItem[];
   has_complaint?: boolean;
   complaint_message?: string | null;
+  area_id?: string;
+  city_id?: string;
+  area_name?: string;
+  city_name?: string;
 }
 
 export interface BookingFilters {

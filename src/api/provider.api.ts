@@ -70,3 +70,7 @@ export const uploadProviderImage = (providerId: string, file: File) => {
     }
   }).then(r => r.data);
 };
+
+export const deleteProvider = (providerId: string) =>
+  api.delete(`/admin/providers/${providerId}`).then(r => r.data);
+

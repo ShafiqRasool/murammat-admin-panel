@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { getProviders, approveProvider, createProvider, updateProvider, uploadProviderImage, type Provider, type ApprovalStatus, type CreateProviderPayload } from '../api/provider.api';
+import { getProviders, approveProvider, createProvider, updateProvider, uploadProviderImage, deleteProvider, type Provider, type ApprovalStatus, type CreateProviderPayload } from '../api/provider.api';
 import ImageUploadWithCrop from '../components/ui/ImageUploadWithCrop';
 import Badge, { statusVariant } from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -89,7 +89,8 @@ const ProvidersPage: React.FC = () => {
   const [areasList, setAreasList] = useState<Area[]>([]);
   const [allAreas, setAllAreas] = useState<Area[]>([]);
   const [selectedCityId, setSelectedCityId] = useState<string>('');
-  const [selectedAreaId, setSelectedAreaId] = useState<string>('');
+  const [selectedAreaIds, setSelectedAreaIds] = useState<string[]>([]);
+  const [areaSearch, setAreaSearch] = useState('');
 
   // Profile image upload states
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
@@ -160,7 +161,8 @@ const ProvidersPage: React.FC = () => {
       cnic: p.cnic || '',
     });
     setSelectedCityId(p.city_ids?.[0] || '');
-    setSelectedAreaId(p.area_ids?.[0] || '');
+    setSelectedAreaIds(p.area_ids || []);
+    setAreaSearch('');
     setSelectedServices(p.service_ids || []);
     setProfileImageFile(null);
     setProfileImagePreview(p.profile_image || null);
@@ -191,8 +193,8 @@ const ProvidersPage: React.FC = () => {
       toast('Profile picture is required for new providers', 'error');
       return;
     }
-    if (!selectedCityId || !selectedAreaId) {
-      toast('City and Area selection are required', 'error');
+    if (!selectedCityId || selectedAreaIds.length === 0) {
+      toast('City and at least one Working Area selection are required', 'error');
       return;
     }
     setSubmitting(true);
@@ -201,7 +203,7 @@ const ProvidersPage: React.FC = () => {
         let updated = await updateProvider(editingProvider.provider_id, {
           ...form,
           service_ids: selectedServices,
-          area_ids: [selectedAreaId],
+          area_ids: selectedAreaIds,
         });
         if (profileImageFile) {
           const uploadRes = await uploadProviderImage(editingProvider.provider_id, profileImageFile);
@@ -218,13 +220,14 @@ const ProvidersPage: React.FC = () => {
         setProfileImagePreview(null);
         setSelectedServices([]);
         setSelectedCityId('');
-        setSelectedAreaId('');
+        setSelectedAreaIds([]);
+        setAreaSearch('');
         toast('Provider updated successfully', 'success');
       } else {
         let newProvider = await createProvider({
           ...form,
           service_ids: selectedServices,
-          area_ids: [selectedAreaId],
+          area_ids: selectedAreaIds,
         });
         if (profileImageFile) {
           const uploadRes = await uploadProviderImage(newProvider.provider_id, profileImageFile);
@@ -240,7 +243,8 @@ const ProvidersPage: React.FC = () => {
         setProfileImagePreview(null);
         setSelectedServices([]);
         setSelectedCityId('');
-        setSelectedAreaId('');
+        setSelectedAreaIds([]);
+        setAreaSearch('');
         toast('Provider created successfully', 'success');
       }
     } catch (err: any) {
@@ -295,6 +299,23 @@ const ProvidersPage: React.FC = () => {
     }
   };
 
+  // ── Delete ──
+  const handleDelete = async (providerId: string, companyName: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${companyName}"? This will remove them from the system.`)) {
+      return;
+    }
+    setActionLoading(true);
+    try {
+      await deleteProvider(providerId);
+      toast('Provider deleted successfully', 'success');
+      load();
+    } catch (e: any) {
+      toast(e?.response?.data?.error || 'Failed to delete provider', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // Search & filter is handled server-side now.
 
   const providerDisplayName = (p: Provider) =>
@@ -312,7 +333,7 @@ const ProvidersPage: React.FC = () => {
         </div>
         <button
           id="add-provider-btn"
-          onClick={() => { setAddOpen(true); setEditingProvider(null); setForm(emptyForm()); setProfileImageFile(null); setProfileImagePreview(null); setSelectedServices([]); setSelectedCityId(''); setSelectedAreaId(''); setShowPassword(false); }}
+          onClick={() => { setAddOpen(true); setEditingProvider(null); setForm(emptyForm()); setProfileImageFile(null); setProfileImagePreview(null); setSelectedServices([]); setSelectedCityId(''); setSelectedAreaIds([]); setAreaSearch(''); setShowPassword(false); }}
           style={{
             display: 'flex', alignItems: 'center', gap: '8px',
             padding: '10px 20px', borderRadius: '10px', border: 'none',
@@ -402,7 +423,7 @@ const ProvidersPage: React.FC = () => {
                 {c.label}
               </span>
             ))}
-            <span style={{ width: '160px', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', textAlign: 'right' }}>
+            <span style={{ width: '220px', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', textAlign: 'right' }}>
               Actions
             </span>
           </div>
@@ -473,7 +494,7 @@ const ProvidersPage: React.FC = () => {
                   </Badge>
                 </div>
                 {/* Quick action buttons */}
-                <div style={{ width: '160px', display: 'flex', gap: '6px', justifyContent: 'flex-end' }} onClick={e => e.stopPropagation()}>
+                <div style={{ width: '220px', display: 'flex', gap: '6px', justifyContent: 'flex-end' }} onClick={e => e.stopPropagation()}>
                   <button
                     onClick={() => handleEditClick(p)}
                     style={{
@@ -504,6 +525,39 @@ const ProvidersPage: React.FC = () => {
                       <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                     </svg>
                     Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(p.provider_id, p.company_name || 'this provider')}
+                    style={{
+                      padding: '6px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid #dc262640',
+                      background: 'var(--input-bg)',
+                      color: '#dc2626',
+                      fontWeight: 600,
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      transition: 'all 0.15s'
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = '#dc262615';
+                      e.currentTarget.style.borderColor = '#dc2626';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = 'var(--input-bg)';
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="12" height="12">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                      <line x1="10" y1="11" x2="10" y2="17"/>
+                      <line x1="14" y1="11" x2="14" y2="17"/>
+                    </svg>
+                    Delete
                   </button>
                   {p.approval_status !== 'approved' && (
                     <Button
@@ -547,7 +601,19 @@ const ProvidersPage: React.FC = () => {
           width="560px"
           footer={
             <div style={{ display: 'flex', gap: '8px', width: '100%', justifyContent: 'space-between' }}>
-              <Button variant="ghost" onClick={() => setDetailModal(false)}>Close</Button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <Button variant="ghost" onClick={() => setDetailModal(false)}>Close</Button>
+                <Button
+                  variant="danger"
+                  loading={actionLoading}
+                  onClick={async () => {
+                    setDetailModal(false);
+                    await handleDelete(selected.provider_id, selected.company_name || 'this provider');
+                  }}
+                >
+                  Delete Provider
+                </Button>
+              </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 {selected.approval_status !== 'rejected' && (
                   <Button
@@ -661,13 +727,13 @@ const ProvidersPage: React.FC = () => {
       {/* ── Add Provider Modal ── */}
       <Modal
         isOpen={addOpen}
-        onClose={() => { setAddOpen(false); setEditingProvider(null); setForm(emptyForm()); setProfileImageFile(null); setProfileImagePreview(null); setSelectedServices([]); setSelectedCityId(''); setSelectedAreaId(''); }}
+        onClose={() => { setAddOpen(false); setEditingProvider(null); setForm(emptyForm()); setProfileImageFile(null); setProfileImagePreview(null); setSelectedServices([]); setSelectedCityId(''); setSelectedAreaIds([]); setAreaSearch(''); }}
         title={editingProvider ? 'Edit Provider' : 'Add New Provider'}
         subtitle={editingProvider ? `Modify profile details for ${providerDisplayName(editingProvider)}` : 'Manually create a service provider account'}
         width="1000px"
         footer={
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-            <Button variant="ghost" onClick={() => { setAddOpen(false); setEditingProvider(null); setForm(emptyForm()); setProfileImageFile(null); setProfileImagePreview(null); setSelectedServices([]); setSelectedCityId(''); setSelectedAreaId(''); }}>
+            <Button variant="ghost" onClick={() => { setAddOpen(false); setEditingProvider(null); setForm(emptyForm()); setProfileImageFile(null); setProfileImagePreview(null); setSelectedServices([]); setSelectedCityId(''); setSelectedAreaIds([]); setAreaSearch(''); }}>
               Cancel
             </Button>
             <button
@@ -789,8 +855,8 @@ const ProvidersPage: React.FC = () => {
 
             {/* Right Column: Location City/Area & Service Checklist */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* Location (City + Area) */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              {/* Location (City + Areas Checklist) */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div>
                   <label style={labelStyle}>City <span style={{ color: '#dc2626' }}>*</span></label>
                   <select
@@ -799,7 +865,7 @@ const ProvidersPage: React.FC = () => {
                     value={selectedCityId}
                     onChange={e => {
                       setSelectedCityId(e.target.value);
-                      setSelectedAreaId('');
+                      setSelectedAreaIds([]);
                     }}
                     style={{ ...inputStyle, cursor: 'pointer' }}
                   >
@@ -807,20 +873,100 @@ const ProvidersPage: React.FC = () => {
                     {citiesList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
-                <div>
-                  <label style={labelStyle}>Area <span style={{ color: '#dc2626' }}>*</span></label>
-                  <select
-                    required
-                    id="prov-area"
-                    value={selectedAreaId}
-                    onChange={e => setSelectedAreaId(e.target.value)}
-                    disabled={!selectedCityId}
-                    style={{ ...inputStyle, cursor: selectedCityId ? 'pointer' : 'not-allowed', opacity: selectedCityId ? 1 : 0.5 }}
-                  >
-                    <option value="">— Select Area —</option>
-                    {areasList.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                  </select>
-                </div>
+
+                {selectedCityId && areasList.length > 0 && (
+                  <div>
+                    <label style={labelStyle}>Working Areas <span style={{ color: '#dc2626' }}>*</span></label>
+                    {selectedAreaIds.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                        {selectedAreaIds.map(aid => {
+                          const area = allAreas.find(a => a.id === aid) || areasList.find(a => a.id === aid);
+                          if (!area) return null;
+                          return (
+                            <span
+                              key={aid}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '4px 10px',
+                                background: '#00674F15',
+                                border: '1px solid #00674F40',
+                                borderRadius: '20px',
+                                fontSize: '12px',
+                                color: '#00674F',
+                                fontWeight: 600,
+                              }}
+                            >
+                              📍 {area.name}
+                              <button
+                                type="button"
+                                onClick={() => setSelectedAreaIds(prev => prev.filter(id => id !== aid))}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  padding: 0,
+                                  cursor: 'pointer',
+                                  color: '#00674F',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  marginLeft: '4px',
+                                }}
+                              >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} width="12" height="12">
+                                  <line x1="18" y1="6" x2="6" y2="18" />
+                                  <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                              </button>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <input
+                      type="text"
+                      placeholder="Search areas..."
+                      value={areaSearch}
+                      onChange={e => setAreaSearch(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        marginBottom: '8px',
+                        background: 'var(--input-bg)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '8px',
+                        color: 'var(--text-primary)',
+                        fontSize: '13px',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <div style={{ maxHeight: '150px', overflowY: 'auto', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {areasList
+                        .filter(a => a.name.toLowerCase().includes(areaSearch.toLowerCase()))
+                        .map(a => {
+                          const isChecked = selectedAreaIds.includes(a.id);
+                          return (
+                            <label key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-primary)' }}>
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={e => {
+                                  if (e.target.checked) {
+                                    setSelectedAreaIds(prev => [...prev, a.id]);
+                                  } else {
+                                    setSelectedAreaIds(prev => prev.filter(id => id !== a.id));
+                                  }
+                                }}
+                                style={{ accentColor: '#00674F', cursor: 'pointer' }}
+                              />
+                              <span>{a.name}</span>
+                            </label>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Services checklist */}
