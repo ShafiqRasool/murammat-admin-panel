@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { getAdminBookings, assignBooking, cancelBooking, updateBookingStatus, createAdminBooking, getAutoAssignSetting, updateAutoAssignSetting, reopenBooking, type Booking } from '../api/booking.api';
+import { getAdminBookings, assignBooking, cancelBooking, updateBookingStatus, createAdminBooking, getAutoAssignSetting, updateAutoAssignSetting, reopenBooking, type Booking, getProposedItems, respondProposal, adminUpdateBookingItems } from '../api/booking.api';
 import { getCategories, type ServiceCategory } from '../api/service.api';
 import { getServices, type Service } from '../api/service.api';
 import { getProviders, type Provider } from '../api/provider.api';
@@ -62,6 +62,98 @@ const BookingsPage: React.FC = () => {
 
   // Modals
   const [viewModal, setViewModal] = useState<Booking | null>(null);
+  const [proposedItems, setProposedItems] = useState<any[]>([]);
+  const [proposedLoading, setProposedLoading] = useState(false);
+  const [respondLoading, setRespondLoading] = useState(false);
+
+  // States for Admin Manual Override Modal
+  const [editBillModal, setEditBillModal] = useState<Booking | null>(null);
+  const [allServices, setAllServices] = useState<Service[]>([]);
+  const [selectedEditItems, setSelectedEditItems] = useState<{ service_id: string; service_name: string; base_price: number; quantity: number }[]>([]);
+  const [saveBillLoading, setSaveBillLoading] = useState(false);
+  const [searchServiceQuery, setSearchServiceQuery] = useState('');
+
+  // Fetch proposed items when viewModal opens
+  useEffect(() => {
+    if (viewModal && viewModal.has_pending_proposals) {
+      setProposedLoading(true);
+      getProposedItems(viewModal.id)
+        .then((res) => {
+          setProposedItems(res);
+          setProposedLoading(false);
+        })
+        .catch((err) => {
+          console.error(err);
+          setProposedLoading(false);
+        });
+    } else {
+      setProposedItems([]);
+    }
+  }, [viewModal]);
+
+  // Load all services for manual override dropdown/search when edit modal opens
+  useEffect(() => {
+    if (editBillModal) {
+      getServices({ booking_id: editBillModal.id }).then((res) => {
+        const list = Array.isArray(res) ? res : (res as any).data || [];
+        setAllServices(list);
+      }).catch((err) => console.error('Failed to load services:', err));
+      
+      // Initialize edit items list with current items of the booking
+      if (editBillModal.items) {
+        setSelectedEditItems(
+          editBillModal.items.map(item => ({
+            service_id: item.service_id,
+            service_name: item.service_name,
+            base_price: Number(item.price),
+            quantity: item.quantity
+          }))
+        );
+      } else {
+        setSelectedEditItems([]);
+      }
+    }
+  }, [editBillModal]);
+
+  const handleRespondProposal = async (bookingId: string, action: 'approve' | 'reject') => {
+    setRespondLoading(true);
+    try {
+      await respondProposal(bookingId, action);
+      toast(`Proposal ${action}ed successfully!`, 'success');
+      loadBookings();
+      setViewModal(null);
+    } catch (err: any) {
+      toast(err.response?.data?.error || 'Failed to submit response', 'error');
+    } finally {
+      setRespondLoading(false);
+    }
+  };
+
+  const handleSaveBill = async () => {
+    if (!editBillModal) return;
+    if (selectedEditItems.length === 0) {
+      toast('Please add at least one item to the bill', 'warning');
+      return;
+    }
+    setSaveBillLoading(true);
+    try {
+      const payload = selectedEditItems.map(item => ({
+        service_id: item.service_id,
+        quantity: item.quantity,
+        price: item.base_price
+      }));
+      await adminUpdateBookingItems(editBillModal.id, payload);
+      toast('Booking items updated successfully', 'success');
+      setEditBillModal(null);
+      setViewModal(null);
+      loadBookings();
+    } catch (err: any) {
+      toast(err.response?.data?.error || 'Failed to update booking items', 'error');
+    } finally {
+      setSaveBillLoading(false);
+    }
+  };
+
   const [assignModal, setAssignModal] = useState<Booking | null>(null);
   const [providerProfileModal, setProviderProfileModal] = useState<Provider | null>(null);
   const [selectedProvider, setSelectedProvider] = useState('');
@@ -772,7 +864,17 @@ const BookingsPage: React.FC = () => {
               </div>
             )}
 
-            <h4 style={{ color: 'var(--text-primary)', fontSize: '14px', margin: '8px 0 0' }}>Ordered Items</h4>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+              <h4 style={{ color: 'var(--text-primary)', fontSize: '14px', margin: 0 }}>Ordered Items</h4>
+              <Button
+                variant="secondary"
+                size="sm"
+                style={{ padding: '4px 8px', fontSize: '11px', height: '24px', borderRadius: '6px' }}
+                onClick={() => setEditBillModal(viewModal)}
+              >
+                ✏️ Edit Items / Bill
+              </Button>
+            </div>
             <div style={{ border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
               {viewModal.items.map((item, idx) => (
                 <div key={item.item_id} style={{
@@ -789,6 +891,51 @@ const BookingsPage: React.FC = () => {
               <span style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: 700 }}>Total</span>
               <span style={{ color: '#00674F', fontSize: '16px', fontWeight: 800 }}>PKR {viewModal.total_amount.toLocaleString()}</span>
             </div>
+
+            {viewModal.has_pending_proposals && (
+              <div style={{ background: '#3b2f0f', padding: '16px', borderRadius: '12px', border: '1px solid #d9770640', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
+                <span style={{ color: '#fbbf24', fontSize: '13px', fontWeight: 'bold' }}>⏳ Proposed Billing Add-ons (Pending Approval)</span>
+                
+                {proposedLoading ? (
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>Loading proposed items...</span>
+                ) : (
+                  <>
+                    <div style={{ border: '1px solid #d9770640', borderRadius: '8px', overflow: 'hidden', background: 'rgba(0,0,0,0.1)' }}>
+                      {proposedItems.map((item, idx) => (
+                        <div key={item.id} style={{
+                          padding: '10px 14px', display: 'flex', justifyContent: 'space-between',
+                          borderBottom: idx < proposedItems.length - 1 ? '1px solid #d9770620' : 'none'
+                        }}>
+                          <span style={{ color: 'var(--text-primary)', fontSize: '12.5px' }}>{item.quantity}x {item.service_name}</span>
+                          <span style={{ color: 'var(--text-secondary)', fontSize: '12.5px' }}>PKR {(Number(item.price) * item.quantity).toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={respondLoading}
+                        style={{ flex: 1, height: '32px', fontSize: '12px' }}
+                        onClick={() => handleRespondProposal(viewModal.id, 'reject')}
+                      >
+                        Reject Proposal
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        loading={respondLoading}
+                        style={{ flex: 1, height: '32px', fontSize: '12px', background: '#00674F' }}
+                        onClick={() => handleRespondProposal(viewModal.id, 'approve')}
+                      >
+                        Approve (On Customer Behalf)
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Assignment Section inside Details Modal for Pending Orders */}
             {viewModal.status === 'BookingDone' && (
@@ -1072,6 +1219,185 @@ const BookingsPage: React.FC = () => {
                   {providerProfileModal.category_ids?.map(id => categories.find(c => c.id === id)?.name).filter(Boolean).join(', ') || 'None'}
                 </span>
               </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Edit Bill Modal (Manual Override) ── */}
+      {editBillModal && (
+        <Modal
+          isOpen={!!editBillModal}
+          onClose={() => setEditBillModal(null)}
+          title={`Edit Bill / Items — Order #${editBillModal.id.split('-')[0].toUpperCase()}`}
+          width="600px"
+          footer={
+            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+              <Button variant="ghost" onClick={() => setEditBillModal(null)}>Cancel</Button>
+              <Button
+                variant="primary"
+                loading={saveBillLoading}
+                onClick={handleSaveBill}
+                style={{ background: '#00674F' }}
+              >
+                Save Changes & Update Bill
+              </Button>
+            </div>
+          }
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+              Add, remove, or modify services for this booking. The customer and provider will be notified.
+            </span>
+
+            {/* Search Catalog */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>Search Catalog Services</label>
+              <input
+                type="text"
+                placeholder="Search service name (e.g. AC, leak, paint)..."
+                value={searchServiceQuery}
+                onChange={(e) => setSearchServiceQuery(e.target.value)}
+                style={{
+                  padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border)',
+                  background: 'var(--input-bg)', color: 'var(--text-primary)', outline: 'none'
+                }}
+              />
+              {searchServiceQuery.trim() !== '' && (
+                <div style={{
+                  border: '1px solid var(--border)', borderRadius: '8px',
+                  maxHeight: '150px', overflowY: 'auto', display: 'flex', flexDirection: 'column',
+                  background: 'var(--input-bg)', marginTop: '4px', overflowX: 'hidden'
+                }}>
+                  {allServices
+                    .filter(s => s.name.toLowerCase().includes(searchServiceQuery.toLowerCase()))
+                    .slice(0, 10)
+                    .map(service => (
+                      <div
+                        key={service.id}
+                        onClick={() => {
+                          const exists = selectedEditItems.some(item => item.service_id === service.id);
+                          if (!exists) {
+                            setSelectedEditItems([
+                              ...selectedEditItems,
+                              {
+                                service_id: service.id,
+                                service_name: service.name,
+                                base_price: Number(service.base_price),
+                                quantity: 1
+                              }
+                            ]);
+                          }
+                          setSearchServiceQuery('');
+                        }}
+                        style={{
+                          padding: '10px 14px', borderBottom: '1px solid var(--border)', cursor: 'pointer',
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.05)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{service.name}</span>
+                        <span style={{ fontSize: '12px', color: '#00674F', fontWeight: 'bold' }}>PKR {Number(service.base_price).toLocaleString()}</span>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            {/* List of Selected Items */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>Active Bill Items</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', background: 'rgba(0,0,0,0.02)' }}>
+                {selectedEditItems.length === 0 ? (
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)', textAlign: 'center', padding: '12px' }}>No items in the bill. Search and add services above.</span>
+                ) : (
+                  selectedEditItems.map((item, idx) => (
+                    <div key={item.service_id} style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between', paddingBottom: idx < selectedEditItems.length - 1 ? '10px' : '0', borderBottom: idx < selectedEditItems.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{item.service_name}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Price: PKR</span>
+                          <input
+                            type="number"
+                            value={item.base_price}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 0;
+                              const updated = [...selectedEditItems];
+                              updated[idx].base_price = val;
+                              setSelectedEditItems(updated);
+                            }}
+                            style={{
+                              width: '80px', padding: '2px 6px', fontSize: '11px', borderRadius: '4px',
+                              border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text-primary)'
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Quantity Selector */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = [...selectedEditItems];
+                            if (item.quantity <= 1) {
+                              updated.splice(idx, 1);
+                            } else {
+                              updated[idx].quantity -= 1;
+                            }
+                            setSelectedEditItems(updated);
+                          }}
+                          style={{
+                            width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text-primary)', cursor: 'pointer'
+                          }}
+                        >
+                          -
+                        </button>
+                        <span style={{ fontSize: '13px', fontWeight: 'bold' }}>{item.quantity}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = [...selectedEditItems];
+                            updated[idx].quantity += 1;
+                            setSelectedEditItems(updated);
+                          }}
+                          style={{
+                            width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text-primary)', cursor: 'pointer'
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      {/* Delete */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = [...selectedEditItems];
+                          updated.splice(idx, 1);
+                          setSelectedEditItems(updated);
+                        }}
+                        style={{
+                          border: 'none', background: 'transparent', color: '#ef4444', fontSize: '16px', cursor: 'pointer', padding: '4px'
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Total */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 12px', marginTop: '4px' }}>
+              <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>New Total Bill Amount</span>
+              <span style={{ fontSize: '15px', fontWeight: 800, color: '#00674F' }}>
+                PKR {selectedEditItems.reduce((sum, item) => sum + (item.base_price * item.quantity), 0).toLocaleString()}
+              </span>
             </div>
           </div>
         </Modal>

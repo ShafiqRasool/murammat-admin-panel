@@ -29,6 +29,7 @@ export interface Booking {
   city_id?: string;
   area_name?: string;
   city_name?: string;
+  has_pending_proposals?: boolean;
 }
 
 export interface BookingFilters {
@@ -90,3 +91,12 @@ export const updateAutoAssignSetting = (auto_assign: boolean, radius?: number) =
 
 export const reopenBooking = (id: string) =>
   api.post<{ message: string }>(`/admin/bookings/${id}/reopen`).then(r => r.data);
+
+export const getProposedItems = (bookingId: string) =>
+  api.get<any[]>(`/bookings/${bookingId}/proposals`).then(r => r.data);
+
+export const respondProposal = (bookingId: string, action: 'approve' | 'reject') =>
+  api.post(`/bookings/${bookingId}/respond-proposal`, { action }).then(r => r.data);
+
+export const adminUpdateBookingItems = (bookingId: string, items: { service_id: string; quantity: number; price?: number }[]) =>
+  api.put(`/admin/bookings/${bookingId}/items`, { items }).then(r => r.data);

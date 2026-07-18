@@ -85,7 +85,7 @@ export const deleteCategory = (id: string) =>
 
 // ─── Services ──────────────────────────────────────────────────────────
 
-export const getServices = (filters?: { category_id?: string; parent_category_id?: string; is_top_service?: string; page?: number; limit?: number; search?: string }) =>
+export const getServices = (filters?: { category_id?: string; parent_category_id?: string; is_top_service?: string; page?: number; limit?: number; search?: string; booking_id?: string }) =>
   api.get<any>('/admin/services/services', { params: filters }).then(r => r.data);
 
 export const addService = (data: ServicePayload) =>
