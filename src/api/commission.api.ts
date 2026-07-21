@@ -1,6 +1,6 @@
 import api from './axios';
 
-export const getPendingCommissions = async (filters?: { page?: number; limit?: number; search?: string }) => {
+export const getPendingCommissions = async (filters?: { page?: number; limit?: number; search?: string; city_id?: string; provider_type?: string }) => {
   const response = await api.get('/admin/commissions/pending', { params: filters });
   return response.data;
 };
@@ -15,7 +15,7 @@ export const rejectCommission = async (paymentId: string) => {
   return response.data;
 };
 
-export const getProvidersCommissionSettings = async (filters?: { page?: number; limit?: number; search?: string }) => {
+export const getProvidersCommissionSettings = async (filters?: { page?: number; limit?: number; search?: string; city_id?: string; provider_type?: string; is_blocked?: string }) => {
   const response = await api.get('/admin/commissions/providers', { params: filters });
   return response.data;
 };

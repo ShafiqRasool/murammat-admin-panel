@@ -257,9 +257,15 @@ const ServicesPage: React.FC = () => {
   const [svcExcludes, setSvcExcludes]   = useState<string[]>([]);
   const [svcIsTop, setSvcIsTop]         = useState(false);
   const [svcCanBeRepaired, setSvcCanBeRepaired] = useState(false);
+  const [svcIsQuotationOnly, setSvcIsQuotationOnly] = useState(false);
   const [svcImageFile, setSvcImageFile] = useState<File | null>(null);
   const [svcImagePreview, setSvcImagePreview] = useState<string | null>(null);
   const [svcSaving, setSvcSaving]       = useState(false);
+
+  // ── Filters state ──
+  const [catFilterParentId, setCatFilterParentId] = useState('');
+  const [svcFilterParentId, setSvcFilterParentId] = useState('');
+  const [svcFilterCatId, setSvcFilterCatId]       = useState('');
 
   // ── Delete state ──
   const [deleteModal, setDeleteModal]   = useState(false);
@@ -312,6 +318,7 @@ const ServicesPage: React.FC = () => {
         page: catPage,
         limit: catPageSize,
         search: catDebouncedSearch.trim() || undefined,
+        parent_category_id: catFilterParentId || undefined,
       });
       setCategories(result.data);
       setCatTotal(result.total);
@@ -320,7 +327,7 @@ const ServicesPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [catPage, catPageSize, catDebouncedSearch]);
+  }, [catPage, catPageSize, catDebouncedSearch, catFilterParentId]);
 
   const loadSvcs = useCallback(async () => {
     setSvcLoading(true);
@@ -329,6 +336,8 @@ const ServicesPage: React.FC = () => {
         page: svcPage,
         limit: svcPageSize,
         search: svcDebouncedSearch.trim() || undefined,
+        parent_category_id: svcFilterParentId || undefined,
+        category_id: svcFilterCatId || undefined,
       });
       setServices(result.data);
       setSvcTotal(result.total);
@@ -337,7 +346,7 @@ const ServicesPage: React.FC = () => {
     } finally {
       setSvcLoading(false);
     }
-  }, [svcPage, svcPageSize, svcDebouncedSearch]);
+  }, [svcPage, svcPageSize, svcDebouncedSearch, svcFilterParentId, svcFilterCatId]);
 
   useEffect(() => {
     loadAllParentCats();
@@ -418,7 +427,7 @@ const ServicesPage: React.FC = () => {
     setSvcCatId(''); setSvcParentCatId(''); setSvcPrice(''); setSvcDiscount('');
     setSvcIncludes([]); setSvcExcludes([]);
     setSvcImageFile(null); setSvcImagePreview(null);
-    setSvcIsTop(false); setSvcCanBeRepaired(false);
+    setSvcIsTop(false); setSvcCanBeRepaired(false); setSvcIsQuotationOnly(false);
   };
 
   const openAddSvc = () => { setEditSvc(null); resetSvcForm(); setSvcModal(true); };
@@ -436,6 +445,7 @@ const ServicesPage: React.FC = () => {
     setSvcExcludes(Array.isArray(s.not_includes) ? s.not_includes : []);
     setSvcIsTop(s.is_top_service ?? false);
     setSvcCanBeRepaired(s.can_be_repaired ?? false);
+    setSvcIsQuotationOnly(s.is_quotation_only ?? false);
     setSvcImagePreview(s.image_url ? (s.image_url.startsWith('http') ? s.image_url : `${mediaBaseUrl}${s.image_url}`) : null);
     setSvcModal(true);
   };
@@ -444,7 +454,7 @@ const ServicesPage: React.FC = () => {
     if (!svcName.trim() || !svcCatId || !svcParentCatId) return toast('Fields are required', 'warning');
     setSvcSaving(true);
     try {
-      const payload = { category_id: svcCatId, parent_category_id: svcParentCatId, name: svcName, small_description: svcSmallDesc, description: svcDesc, base_price: parseFloat(svcPrice) || 0, discounted_price: svcDiscount ? parseFloat(svcDiscount) : null, includes: svcIncludes, not_includes: svcExcludes, is_top_service: svcIsTop, can_be_repaired: svcCanBeRepaired };
+      const payload = { category_id: svcCatId, parent_category_id: svcParentCatId, name: svcName, small_description: svcSmallDesc, description: svcDesc, base_price: parseFloat(svcPrice) || 0, discounted_price: svcDiscount ? parseFloat(svcDiscount) : null, includes: svcIncludes, not_includes: svcExcludes, is_top_service: svcIsTop, can_be_repaired: svcCanBeRepaired, is_quotation_only: svcIsQuotationOnly };
       if (editSvc) { await updateService(editSvc.id, payload); if (svcImageFile) await uploadServiceImage(editSvc.id, svcImageFile); toast('Updated'); }
       else { const res: any = await addService(payload); if (svcImageFile) await uploadServiceImage(res.service.id, svcImageFile); toast('Added'); }
       setSvcModal(false); loadSvcs();
@@ -552,7 +562,32 @@ const ServicesPage: React.FC = () => {
             <h2 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Sub Categories</h2>
             <button onClick={openAddCat} style={btnPrimary}>+ Add Sub Category</button>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Filter Parent:</span>
+              <select
+                value={catFilterParentId}
+                onChange={e => {
+                  setCatFilterParentId(e.target.value);
+                  setCatPage(1);
+                }}
+                style={{
+                  padding: '8px 12px',
+                  background: 'var(--input-bg)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '10px',
+                  color: 'var(--text-primary)',
+                  fontSize: '13px',
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="">All / تمام</option>
+                {allParentCategories.map(pc => (
+                  <option key={pc.id} value={pc.id}>{pc.name}</option>
+                ))}
+              </select>
+            </div>
             <div style={{ position: 'relative', width: '260px' }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="15" height="15"
                 style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
@@ -602,7 +637,63 @@ const ServicesPage: React.FC = () => {
             <h2 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Services</h2>
             <button onClick={openAddSvc} style={btnPrimary}>+ Add Service</button>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Parent:</span>
+                <select
+                  value={svcFilterParentId}
+                  onChange={e => {
+                    setSvcFilterParentId(e.target.value);
+                    setSvcFilterCatId('');
+                    setSvcPage(1);
+                  }}
+                  style={{
+                    padding: '8px 12px',
+                    background: 'var(--input-bg)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '10px',
+                    color: 'var(--text-primary)',
+                    fontSize: '13px',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="">All / تمام</option>
+                  {allParentCategories.map(pc => (
+                    <option key={pc.id} value={pc.id}>{pc.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Category:</span>
+                <select
+                  value={svcFilterCatId}
+                  onChange={e => {
+                    setSvcFilterCatId(e.target.value);
+                    setSvcPage(1);
+                  }}
+                  style={{
+                    padding: '8px 12px',
+                    background: 'var(--input-bg)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '10px',
+                    color: 'var(--text-primary)',
+                    fontSize: '13px',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="">All / تمام</option>
+                  {allCategories
+                    .filter(c => !svcFilterParentId || c.parent_category_id === svcFilterParentId)
+                    .map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                </select>
+              </div>
+            </div>
             <div style={{ position: 'relative', width: '260px' }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="15" height="15"
                 style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
@@ -892,6 +983,21 @@ const ServicesPage: React.FC = () => {
                   🔧 Allow Repair Status
                 </label>
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Provider can put this service's order into "Repair" mode (max 24h)</span>
+              </div>
+            </div>
+            <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--input-bg)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+              <input 
+                type="checkbox" 
+                id="isQuotationOnly" 
+                checked={svcIsQuotationOnly}
+                onChange={(e) => setSvcIsQuotationOnly(e.target.checked)}
+                style={{ width: '18px', height: '18px', accentColor: '#3498db', cursor: 'pointer' }}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <label htmlFor="isQuotationOnly" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer', marginBottom: 0 }}>
+                  📄 Is Quotation Only
+                </label>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>This service requires the provider to inspect and submit a quote on-site</span>
               </div>
             </div>
           </div>

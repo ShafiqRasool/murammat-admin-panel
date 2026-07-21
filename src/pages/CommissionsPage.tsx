@@ -80,6 +80,10 @@ const CommissionsPage: React.FC = () => {
   const [pendingPageSize, setPendingPageSize] = useState(10);
   const [pendingTotal, setPendingTotal] = useState(0);
 
+  // --- Pending Approvals Filters ---
+  const [pendingFilterCityId, setPendingFilterCityId] = useState('');
+  const [pendingFilterType, setPendingFilterType]     = useState('');
+
   // --- Providers Limits State ---
   const [providersSettings, setProvidersSettings] = useState<any[]>([]);
   const [providersLoading, setProvidersLoading] = useState(true);
@@ -88,6 +92,11 @@ const CommissionsPage: React.FC = () => {
   const [providersPage, setProvidersPage] = useState(1);
   const [providersPageSize, setProvidersPageSize] = useState(10);
   const [providersTotal, setProvidersTotal] = useState(0);
+
+  // --- Providers Limits Filters ---
+  const [providersFilterCityId, setProvidersFilterCityId] = useState('');
+  const [providersFilterType, setProvidersFilterType]     = useState('');
+  const [providersFilterBlocked, setProvidersFilterBlocked] = useState('');
 
   const [editModal, setEditModal] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<any | null>(null);
@@ -149,14 +158,14 @@ const CommissionsPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [providersSearch]);
 
-  // Reset pages on search change
+  // Reset pages on search or filter change
   useEffect(() => {
     setPendingPage(1);
-  }, [pendingDebouncedSearch]);
+  }, [pendingDebouncedSearch, pendingFilterCityId, pendingFilterType]);
 
   useEffect(() => {
     setProvidersPage(1);
-  }, [providersDebouncedSearch]);
+  }, [providersDebouncedSearch, providersFilterCityId, providersFilterType, providersFilterBlocked]);
 
   // --- API Fetch Functions ---
   const loadPending = useCallback(async () => {
@@ -166,6 +175,8 @@ const CommissionsPage: React.FC = () => {
         page: pendingPage,
         limit: pendingPageSize,
         search: pendingDebouncedSearch.trim() || undefined,
+        city_id: pendingFilterCityId || undefined,
+        provider_type: pendingFilterType || undefined,
       });
       setPendingPayments(result.data);
       setPendingTotal(result.total);
@@ -174,7 +185,7 @@ const CommissionsPage: React.FC = () => {
     } finally {
       setPendingLoading(false);
     }
-  }, [pendingPage, pendingPageSize, pendingDebouncedSearch]);
+  }, [pendingPage, pendingPageSize, pendingDebouncedSearch, pendingFilterCityId, pendingFilterType]);
 
   const loadProviders = useCallback(async () => {
     setProvidersLoading(true);
@@ -183,6 +194,9 @@ const CommissionsPage: React.FC = () => {
         page: providersPage,
         limit: providersPageSize,
         search: providersDebouncedSearch.trim() || undefined,
+        city_id: providersFilterCityId || undefined,
+        provider_type: providersFilterType || undefined,
+        is_blocked: providersFilterBlocked || undefined,
       });
       setProvidersSettings(result.data);
       setProvidersTotal(result.total);
@@ -191,7 +205,7 @@ const CommissionsPage: React.FC = () => {
     } finally {
       setProvidersLoading(false);
     }
-  }, [providersPage, providersPageSize, providersDebouncedSearch]);
+  }, [providersPage, providersPageSize, providersDebouncedSearch, providersFilterCityId, providersFilterType, providersFilterBlocked]);
 
   useEffect(() => {
     if (tab === 'pending') {
@@ -270,7 +284,53 @@ const CommissionsPage: React.FC = () => {
       {/* --- Pending Approvals Tab --- */}
       {tab === 'pending' && (
         <>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>City:</span>
+                <select
+                  value={pendingFilterCityId}
+                  onChange={e => setPendingFilterCityId(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    background: 'var(--input-bg)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '10px',
+                    color: 'var(--text-primary)',
+                    fontSize: '13px',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="">All / تمام</option>
+                  {citiesList.map(city => (
+                    <option key={city.id} value={city.id}>{city.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Type:</span>
+                <select
+                  value={pendingFilterType}
+                  onChange={e => setPendingFilterType(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    background: 'var(--input-bg)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '10px',
+                    color: 'var(--text-primary)',
+                    fontSize: '13px',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="">All / تمام</option>
+                  <option value="individual">Individual</option>
+                  <option value="company">Company</option>
+                </select>
+              </div>
+            </div>
             <div style={{ position: 'relative', width: '260px' }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="15" height="15"
                 style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
@@ -309,8 +369,16 @@ const CommissionsPage: React.FC = () => {
                     style={{ display: 'flex', alignItems: 'center', padding: '13px 16px', borderBottom: i < pendingPayments.length - 1 ? '1px solid #1e3d3060' : 'none' }}
                   >
                     <span style={{ flex: 1.2, fontSize: '14px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      <div style={{ fontWeight: 600 }}>{row.company_name}</div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{row.first_name} {row.last_name} ({row.provider_phone})</div>
+                      <div style={{ fontWeight: 600 }}>
+                        {row.company_name && row.company_name.toLowerCase() === 'individual'
+                          ? `${row.first_name} ${row.last_name}`
+                          : row.company_name}
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        {row.company_name && row.company_name.toLowerCase() === 'individual'
+                          ? `Individual (${row.provider_phone || ''})`
+                          : `${row.first_name} ${row.last_name} (${row.provider_phone || ''})`}
+                      </div>
                     </span>
                     <span style={{ flex: 0.8, fontSize: '14px', color: '#10b981', fontWeight: 600 }}>PKR {parseFloat(row.amount).toLocaleString()}</span>
                     <span style={{ flex: 1.2, fontSize: '14px', color: '#3b82f6', fontWeight: 600 }}>{row.tid}</span>
@@ -338,7 +406,75 @@ const CommissionsPage: React.FC = () => {
       {/* --- Provider Limits & Settings Tab --- */}
       {tab === 'providers' && (
         <>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>City:</span>
+                <select
+                  value={providersFilterCityId}
+                  onChange={e => setProvidersFilterCityId(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    background: 'var(--input-bg)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '10px',
+                    color: 'var(--text-primary)',
+                    fontSize: '13px',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="">All / تمام</option>
+                  {citiesList.map(city => (
+                    <option key={city.id} value={city.id}>{city.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Type:</span>
+                <select
+                  value={providersFilterType}
+                  onChange={e => setProvidersFilterType(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    background: 'var(--input-bg)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '10px',
+                    color: 'var(--text-primary)',
+                    fontSize: '13px',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="">All / تمام</option>
+                  <option value="individual">Individual</option>
+                  <option value="company">Company</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Status:</span>
+                <select
+                  value={providersFilterBlocked}
+                  onChange={e => setProvidersFilterBlocked(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    background: 'var(--input-bg)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '10px',
+                    color: 'var(--text-primary)',
+                    fontSize: '13px',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="">All / تمام</option>
+                  <option value="false">Active / unblocked</option>
+                  <option value="true">Blocked</option>
+                </select>
+              </div>
+            </div>
             <div style={{ position: 'relative', width: '260px' }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="15" height="15"
                 style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
@@ -381,8 +517,16 @@ const CommissionsPage: React.FC = () => {
                       style={{ display: 'flex', alignItems: 'center', padding: '13px 16px', borderBottom: i < providersSettings.length - 1 ? '1px solid #1e3d3060' : 'none' }}
                     >
                       <span style={{ flex: 1.2, fontSize: '14px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        <div style={{ fontWeight: 600 }}>{row.company_name}</div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{row.first_name} {row.last_name}</div>
+                        <div style={{ fontWeight: 600 }}>
+                          {row.company_name && row.company_name.toLowerCase() === 'individual'
+                            ? `${row.first_name} ${row.last_name}`
+                            : row.company_name}
+                        </div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                          {row.company_name && row.company_name.toLowerCase() === 'individual'
+                            ? 'Individual'
+                            : `${row.first_name} ${row.last_name}`}
+                        </div>
                       </span>
                       <span style={{ flex: 0.8, fontSize: '14px', color: balance < 0 ? '#ef4444' : '#10b981', fontWeight: 600 }}>
                         PKR {balance.toLocaleString()}

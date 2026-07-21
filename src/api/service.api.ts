@@ -35,6 +35,7 @@ export interface Service {
   not_includes: string[];
   is_top_service: boolean;
   can_be_repaired: boolean;
+  is_quotation_only: boolean;
   parent_category_id: string;
   image_url?: string | null;
   created_at: string;
@@ -52,6 +53,7 @@ export interface ServicePayload {
   not_includes?: string[];
   is_top_service?: boolean;
   can_be_repaired?: boolean;
+  is_quotation_only?: boolean;
   parent_category_id: string;
 }
 
