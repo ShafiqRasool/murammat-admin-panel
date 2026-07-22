@@ -893,17 +893,40 @@ const CommissionsPage: React.FC = () => {
       <Modal isOpen={slipModal} onClose={() => setSlipModal(false)} title="Payment Slip Receipt / ادائیگی کی رسید">
         <div style={{ textAlign: 'center', padding: '10px' }}>
           {selectedSlipUrl ? (
-            <img
-              src={`https://murammat.smartxsolutions.org${selectedSlipUrl}`}
-              alt="Payment Slip"
-              style={{ maxWidth: '100%', maxHeight: '70vh', borderRadius: '12px', border: '1px solid var(--border)', objectFit: 'contain' }}
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                if (!target.src.includes('localhost')) {
-                  target.src = `http://localhost:5000${selectedSlipUrl}`;
-                }
-              }}
-            />
+            <div>
+              <div style={{ marginBottom: '12px', textAlign: 'right' }}>
+                <a
+                  href={(() => {
+                    if (selectedSlipUrl.startsWith('http')) return selectedSlipUrl;
+                    const baseUrl = (import.meta.env.VITE_BACKENDURL || 'http://localhost:3000').replace(/\/api$/, '');
+                    const cleanPath = selectedSlipUrl.startsWith('/') ? selectedSlipUrl : `/${selectedSlipUrl}`;
+                    return `${baseUrl}${cleanPath}`;
+                  })()}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ fontSize: '12px', color: '#10b981', fontWeight: 600, textDecoration: 'none' }}
+                >
+                  Open Full Image in New Tab ↗
+                </a>
+              </div>
+              <img
+                src={(() => {
+                  if (selectedSlipUrl.startsWith('http')) return selectedSlipUrl;
+                  const baseUrl = (import.meta.env.VITE_BACKENDURL || 'http://localhost:3000').replace(/\/api$/, '');
+                  const cleanPath = selectedSlipUrl.startsWith('/') ? selectedSlipUrl : `/${selectedSlipUrl}`;
+                  return `${baseUrl}${cleanPath}`;
+                })()}
+                alt="Payment Slip"
+                style={{ maxWidth: '100%', maxHeight: '65vh', borderRadius: '12px', border: '1px solid var(--border)', objectFit: 'contain' }}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  const fallbackUrl = `http://localhost:5000${selectedSlipUrl.startsWith('/') ? selectedSlipUrl : '/' + selectedSlipUrl}`;
+                  if (target.src !== fallbackUrl) {
+                    target.src = fallbackUrl;
+                  }
+                }}
+              />
+            </div>
           ) : (
             <div style={{ color: 'var(--text-muted)', padding: '40px' }}>No slip image uploaded for this payment.</div>
           )}
