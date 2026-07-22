@@ -125,6 +125,10 @@ const CommissionsPage: React.FC = () => {
   const [selectedProviderDetails, setSelectedProviderDetails] = useState<Provider | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
+  // --- Payment Slip Modal state ---
+  const [slipModal, setSlipModal] = useState(false);
+  const [selectedSlipUrl, setSelectedSlipUrl] = useState<string | null>(null);
+
   useEffect(() => {
     getCities().then(setCitiesList).catch(() => {});
     getAreas().then(setAllAreas).catch(() => {});
@@ -430,7 +434,10 @@ const CommissionsPage: React.FC = () => {
                     <span style={{ flex: 0.8, fontSize: '14px', color: '#10b981', fontWeight: 600 }}>PKR {parseFloat(row.amount).toLocaleString()}</span>
                     <span style={{ flex: 1.2, fontSize: '14px', color: '#3b82f6', fontWeight: 600 }}>{row.tid}</span>
                     <span style={{ flex: 1, fontSize: '13px', color: 'var(--text-secondary)' }}>{new Date(row.created_at).toLocaleDateString()}</span>
-                    <div style={{ width: '220px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                    <div style={{ width: '260px', display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                      {row.slip_url && (
+                        <Button variant="secondary" size="sm" onClick={() => { setSelectedSlipUrl(row.slip_url); setSlipModal(true); }}>Slip</Button>
+                      )}
                       <Button variant="secondary" size="sm" onClick={() => handleViewDetails(row.provider_id)}>View</Button>
                       <Button variant="primary" size="sm" onClick={() => handleApprove(row.id)}>Approve</Button>
                       <Button variant="danger" size="sm" onClick={() => handleReject(row.id)}>Reject</Button>
@@ -566,7 +573,10 @@ const CommissionsPage: React.FC = () => {
                         </span>
                       </span>
                       <span style={{ flex: 1, fontSize: '13px', color: 'var(--text-secondary)' }}>{new Date(row.created_at).toLocaleDateString()}</span>
-                      <div style={{ width: '180px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                      <div style={{ width: '260px', display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                        {row.slip_url && (
+                          <Button variant="secondary" size="sm" onClick={() => { setSelectedSlipUrl(row.slip_url); setSlipModal(true); }}>Slip</Button>
+                        )}
                         <Button variant="secondary" size="sm" onClick={() => handleViewDetails(row.provider_id)}>View</Button>
                         {st === 'pending' && (
                           <>
@@ -877,6 +887,27 @@ const CommissionsPage: React.FC = () => {
         ) : (
           <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>No details available</div>
         )}
+      </Modal>
+
+      {/* --- Payment Slip Image Modal --- */}
+      <Modal isOpen={slipModal} onClose={() => setSlipModal(false)} title="Payment Slip Receipt / ادائیگی کی رسید">
+        <div style={{ textAlign: 'center', padding: '10px' }}>
+          {selectedSlipUrl ? (
+            <img
+              src={`https://murammat.smartxsolutions.org${selectedSlipUrl}`}
+              alt="Payment Slip"
+              style={{ maxWidth: '100%', maxHeight: '70vh', borderRadius: '12px', border: '1px solid var(--border)', objectFit: 'contain' }}
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                if (!target.src.includes('localhost')) {
+                  target.src = `http://localhost:5000${selectedSlipUrl}`;
+                }
+              }}
+            />
+          ) : (
+            <div style={{ color: 'var(--text-muted)', padding: '40px' }}>No slip image uploaded for this payment.</div>
+          )}
+        </div>
       </Modal>
     </div>
   );
