@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   getPendingCommissions,
+  getAllCommissionPayments,
   approveCommission,
   rejectCommission,
   getProvidersCommissionSettings,
@@ -69,7 +70,7 @@ const Tab: React.FC<{ label: string; active: boolean; onClick: () => void }> = (
 );
 
 const CommissionsPage: React.FC = () => {
-  const [tab, setTab] = useState<'pending' | 'providers'>('pending');
+  const [tab, setTab] = useState<'pending' | 'history' | 'providers'>('pending');
 
   // --- Pending Approvals State ---
   const [pendingPayments, setPendingPayments] = useState<any[]>([]);
@@ -83,6 +84,17 @@ const CommissionsPage: React.FC = () => {
   // --- Pending Approvals Filters ---
   const [pendingFilterCityId, setPendingFilterCityId] = useState('');
   const [pendingFilterType, setPendingFilterType]     = useState('');
+
+  // --- All Payments History State ---
+  const [historyPayments, setHistoryPayments] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyDebouncedSearch, setHistoryDebouncedSearch] = useState('');
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPageSize, setHistoryPageSize] = useState(10);
+  const [historyTotal, setHistoryTotal] = useState(0);
+  const [historyFilterStatus, setHistoryFilterStatus] = useState('all');
+  const [historyFilterProviderId, setHistoryFilterProviderId] = useState('');
 
   // --- Providers Limits State ---
   const [providersSettings, setProvidersSettings] = useState<any[]>([]);
@@ -153,6 +165,13 @@ const CommissionsPage: React.FC = () => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
+      setHistoryDebouncedSearch(historySearch);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [historySearch]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
       setProvidersDebouncedSearch(providersSearch);
     }, 400);
     return () => clearTimeout(timer);
@@ -162,6 +181,10 @@ const CommissionsPage: React.FC = () => {
   useEffect(() => {
     setPendingPage(1);
   }, [pendingDebouncedSearch, pendingFilterCityId, pendingFilterType]);
+
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [historyDebouncedSearch, historyFilterStatus, historyFilterProviderId]);
 
   useEffect(() => {
     setProvidersPage(1);
@@ -187,6 +210,25 @@ const CommissionsPage: React.FC = () => {
     }
   }, [pendingPage, pendingPageSize, pendingDebouncedSearch, pendingFilterCityId, pendingFilterType]);
 
+  const loadHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const result = await getAllCommissionPayments({
+        page: historyPage,
+        limit: historyPageSize,
+        search: historyDebouncedSearch.trim() || undefined,
+        status: historyFilterStatus !== 'all' ? historyFilterStatus : undefined,
+        provider_id: historyFilterProviderId || undefined,
+      });
+      setHistoryPayments(result.data || []);
+      setHistoryTotal(result.total || 0);
+    } catch {
+      toast('Failed to load payments history', 'error');
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [historyPage, historyPageSize, historyDebouncedSearch, historyFilterStatus, historyFilterProviderId]);
+
   const loadProviders = useCallback(async () => {
     setProvidersLoading(true);
     try {
@@ -210,17 +252,20 @@ const CommissionsPage: React.FC = () => {
   useEffect(() => {
     if (tab === 'pending') {
       loadPending();
+    } else if (tab === 'history') {
+      loadHistory();
     } else {
       loadProviders();
     }
-  }, [tab, loadPending, loadProviders]);
+  }, [tab, loadPending, loadHistory, loadProviders]);
 
   // --- Actions ---
   const handleApprove = async (id: string) => {
     try {
       await approveCommission(id);
       toast('Commission payment approved!');
-      loadPending();
+      if (tab === 'pending') loadPending();
+      if (tab === 'history') loadHistory();
     } catch (e: any) {
       toast(e?.response?.data?.error || 'Failed to approve payment', 'error');
     }
@@ -230,7 +275,8 @@ const CommissionsPage: React.FC = () => {
     try {
       await rejectCommission(id);
       toast('Commission payment proof rejected');
-      loadPending();
+      if (tab === 'pending') loadPending();
+      if (tab === 'history') loadHistory();
     } catch (e: any) {
       toast(e?.response?.data?.error || 'Failed to reject payment', 'error');
     }
@@ -278,6 +324,7 @@ const CommissionsPage: React.FC = () => {
       {/* --- Tabs --- */}
       <div style={{ display: 'flex', gap: '6px', background: 'var(--input-bg)', padding: '5px', borderRadius: '10px', border: '1px solid var(--border)', width: 'fit-content', marginBottom: '24px' }}>
         <Tab label="Pending Approvals" active={tab === 'pending'} onClick={() => setTab('pending')} />
+        <Tab label="All Payments History" active={tab === 'history'} onClick={() => setTab('history')} />
         <Tab label="Provider Limits & Settings" active={tab === 'providers'} onClick={() => setTab('providers')} />
       </div>
 
@@ -397,6 +444,147 @@ const CommissionsPage: React.FC = () => {
                 pageSize={pendingPageSize}
                 onPageChange={setPendingPage}
                 onPageSizeChange={setPendingPageSize}
+              />
+            </div>
+          )}
+        </>
+      )}
+
+      {/* --- All Payments History Tab --- */}
+      {tab === 'history' && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Status:</span>
+                <select
+                  value={historyFilterStatus}
+                  onChange={e => setHistoryFilterStatus(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    background: 'var(--input-bg)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '10px',
+                    color: 'var(--text-primary)',
+                    fontSize: '13px',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="all">All / تمام</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+              {historyFilterProviderId && (
+                <button
+                  onClick={() => setHistoryFilterProviderId('')}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #ef4444',
+                    background: '#fef2f2',
+                    color: '#ef4444',
+                    fontSize: '12px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Clear Provider Filter ✕
+                </button>
+              )}
+            </div>
+            <div style={{ position: 'relative', width: '260px' }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="15" height="15"
+                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input
+                value={historySearch}
+                onChange={e => setHistorySearch(e.target.value)}
+                placeholder="Search TID, Provider name…"
+                style={{
+                  padding: '9px 14px 9px 36px',
+                  background: 'var(--input-bg)', border: '1px solid var(--border)',
+                  borderRadius: '10px', color: 'var(--text-primary)', fontSize: '13px', width: '100%',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+          </div>
+          {historyLoading ? (
+            <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>Loading payments history…</div>
+          ) : (
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface-raised)' }}>
+                <span style={{ flex: 1.2, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Provider / Partner</span>
+                <span style={{ flex: 0.8, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Amount</span>
+                <span style={{ flex: 1.2, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TID / Ref #</span>
+                <span style={{ flex: 0.8, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</span>
+                <span style={{ flex: 1, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Date</span>
+                <span style={{ width: '180px', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', textAlign: 'right' }}>Actions</span>
+              </div>
+              {historyPayments.length === 0 ? (
+                <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>No payment records found.</div>
+              ) : (
+                historyPayments.map((row, i) => {
+                  const st = (row.status || 'pending').toLowerCase();
+                  let badgeBg = '#fef3c7';
+                  let badgeColor = '#92400e';
+                  let badgeText = 'PENDING';
+
+                  if (st === 'approved') {
+                    badgeBg = '#d1fae5';
+                    badgeColor = '#065f46';
+                    badgeText = 'APPROVED';
+                  } else if (st === 'rejected') {
+                    badgeBg = '#fecaca';
+                    badgeColor = '#991b1b';
+                    badgeText = 'REJECTED';
+                  }
+
+                  return (
+                    <div
+                      key={row.id}
+                      style={{ display: 'flex', alignItems: 'center', padding: '13px 16px', borderBottom: i < historyPayments.length - 1 ? '1px solid #1e3d3060' : 'none' }}
+                    >
+                      <span style={{ flex: 1.2, fontSize: '14px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <div style={{ fontWeight: 600 }}>
+                          {row.company_name && row.company_name.toLowerCase() === 'individual'
+                            ? `${row.first_name} ${row.last_name}`
+                            : row.company_name}
+                        </div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                          {row.provider_phone || row.provider_email || ''}
+                        </div>
+                      </span>
+                      <span style={{ flex: 0.8, fontSize: '14px', color: '#10b981', fontWeight: 600 }}>PKR {parseFloat(row.amount).toLocaleString()}</span>
+                      <span style={{ flex: 1.2, fontSize: '14px', color: '#3b82f6', fontWeight: 600 }}>{row.tid}</span>
+                      <span style={{ flex: 0.8 }}>
+                        <span style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600, backgroundColor: badgeBg, color: badgeColor }}>
+                          {badgeText}
+                        </span>
+                      </span>
+                      <span style={{ flex: 1, fontSize: '13px', color: 'var(--text-secondary)' }}>{new Date(row.created_at).toLocaleDateString()}</span>
+                      <div style={{ width: '180px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                        <Button variant="secondary" size="sm" onClick={() => handleViewDetails(row.provider_id)}>View</Button>
+                        {st === 'pending' && (
+                          <>
+                            <Button variant="primary" size="sm" onClick={() => handleApprove(row.id)}>Approve</Button>
+                            <Button variant="danger" size="sm" onClick={() => handleReject(row.id)}>Reject</Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              <Pagination
+                currentPage={historyPage}
+                totalItems={historyTotal}
+                pageSize={historyPageSize}
+                onPageChange={setHistoryPage}
+                onPageSizeChange={setHistoryPageSize}
               />
             </div>
           )}

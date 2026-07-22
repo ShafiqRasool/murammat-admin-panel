@@ -27,3 +27,8 @@ export const updateProviderCommissionSettings = async (
   const response = await api.patch(`/admin/commissions/providers/${providerId}`, data);
   return response.data;
 };
+
+export const getAllCommissionPayments = async (filters?: { provider_id?: string; status?: string; search?: string; page?: number; limit?: number }) => {
+  const response = await api.get('/admin/commissions/all-payments', { params: filters });
+  return response.data;
+};
