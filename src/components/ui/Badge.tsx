@@ -33,6 +33,7 @@ export const statusVariant = (status: string): BadgeVariant => {
     case 'cancelled':
       return 'error';
     case 'technician assigned':
+    case 'reached':
     case 'work started':
       return 'info';
     default:

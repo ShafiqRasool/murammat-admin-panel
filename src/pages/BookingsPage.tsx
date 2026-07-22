@@ -18,6 +18,7 @@ const STATUS_TABS = [
   { key: 'all',                 label: 'All Orders' },
   { key: 'BookingDone',         label: 'Booking Done',        color: '#d97706' },
   { key: 'Technician Assigned', label: 'Technician Assigned', color: '#00674F' },
+  { key: 'Reached',             label: 'Reached',             color: '#8b5cf6' },
   { key: 'Work Started',        label: 'Work Started',        color: '#0891b2' },
   { key: 'Work Done',           label: 'Work Done',           color: '#f59e0b' },
   { key: 'Rated & Reviewed',    label: 'Rated & Reviewed',    color: '#16a34a' },
@@ -734,6 +735,7 @@ const BookingsPage: React.FC = () => {
                     }}
                   >
                     <option value="Technician Assigned">Technician Assigned</option>
+                    <option value="Reached">Reached</option>
                     <option value="Work Started">Work Started</option>
                     <option value="Work Done">Work Done</option>
                     <option value="Rated & Reviewed">Rated & Reviewed</option>
