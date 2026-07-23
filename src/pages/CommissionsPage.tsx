@@ -407,8 +407,9 @@ const CommissionsPage: React.FC = () => {
               <div style={{ display: 'flex', padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface-raised)' }}>
                 <span style={{ flex: 1.2, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Provider / Company</span>
                 <span style={{ flex: 0.8, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Amount</span>
-                <span style={{ flex: 1.2, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TID (JazzCash)</span>
-                <span style={{ flex: 1, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Submitted At</span>
+                <span style={{ flex: 1.4, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Balance Footprint (Before → After)</span>
+                <span style={{ flex: 1.1, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TID (JazzCash)</span>
+                <span style={{ flex: 0.9, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Submitted At</span>
                 <span style={{ width: '220px', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', textAlign: 'right' }}>Actions</span>
               </div>
               {pendingPayments.length === 0 ? (
@@ -432,9 +433,28 @@ const CommissionsPage: React.FC = () => {
                       </div>
                     </span>
                     <span style={{ flex: 0.8, fontSize: '14px', color: '#10b981', fontWeight: 600 }}>PKR {parseFloat(row.amount).toLocaleString()}</span>
-                    <span style={{ flex: 1.2, fontSize: '14px', color: '#3b82f6', fontWeight: 600 }}>{row.tid}</span>
-                    <span style={{ flex: 1, fontSize: '13px', color: 'var(--text-secondary)' }}>{new Date(row.created_at).toLocaleDateString()}</span>
-                    <div style={{ width: '260px', display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                    <span style={{ flex: 1.4, fontSize: '12px' }}>
+                      {(() => {
+                        const amt = parseFloat(row.amount || 0);
+                        const curBal = row.before_balance !== null && row.before_balance !== undefined 
+                          ? parseFloat(row.before_balance) 
+                          : parseFloat(row.current_wallet_balance || 0);
+                        const afterBal = curBal + amt;
+                        return (
+                          <div style={{ background: '#f8fafc', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <div style={{ color: curBal < 0 ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
+                              Before: {curBal < 0 ? `PKR ${Math.abs(curBal).toLocaleString()} Dues` : `PKR ${curBal.toLocaleString()}`}
+                            </div>
+                            <div style={{ color: afterBal < 0 ? '#dc2626' : '#16a34a', fontWeight: 600, marginTop: '2px' }}>
+                              After: {afterBal < 0 ? `PKR ${Math.abs(afterBal).toLocaleString()} Dues` : (afterBal === 0 ? 'PKR 0 (Cleared ✨)' : `PKR ${afterBal.toLocaleString()}`)}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </span>
+                    <span style={{ flex: 1.1, fontSize: '14px', color: '#3b82f6', fontWeight: 600 }}>{row.tid}</span>
+                    <span style={{ flex: 0.9, fontSize: '13px', color: 'var(--text-secondary)' }}>{new Date(row.created_at).toLocaleDateString()}</span>
+                    <div style={{ width: '220px', display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                       {row.slip_url && (
                         <Button variant="secondary" size="sm" onClick={() => { setSelectedSlipUrl(row.slip_url); setSlipModal(true); }}>Slip</Button>
                       )}
@@ -526,9 +546,10 @@ const CommissionsPage: React.FC = () => {
               <div style={{ display: 'flex', padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface-raised)' }}>
                 <span style={{ flex: 1.2, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Provider / Partner</span>
                 <span style={{ flex: 0.8, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Amount</span>
-                <span style={{ flex: 1.2, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TID / Ref #</span>
+                <span style={{ flex: 1.4, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Balance Footprint</span>
+                <span style={{ flex: 1.1, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TID / Ref #</span>
                 <span style={{ flex: 0.8, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</span>
-                <span style={{ flex: 1, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Date</span>
+                <span style={{ flex: 0.9, fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Date</span>
                 <span style={{ width: '180px', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', textAlign: 'right' }}>Actions</span>
               </div>
               {historyPayments.length === 0 ? (
@@ -550,6 +571,10 @@ const CommissionsPage: React.FC = () => {
                     badgeText = 'REJECTED';
                   }
 
+                  const amt = parseFloat(row.amount || 0);
+                  const beforeBal = row.before_balance !== null && row.before_balance !== undefined ? parseFloat(row.before_balance) : null;
+                  const afterBal = row.after_balance !== null && row.after_balance !== undefined ? parseFloat(row.after_balance) : null;
+
                   return (
                     <div
                       key={row.id}
@@ -565,15 +590,25 @@ const CommissionsPage: React.FC = () => {
                           {row.provider_phone || row.provider_email || ''}
                         </div>
                       </span>
-                      <span style={{ flex: 0.8, fontSize: '14px', color: '#10b981', fontWeight: 600 }}>PKR {parseFloat(row.amount).toLocaleString()}</span>
-                      <span style={{ flex: 1.2, fontSize: '14px', color: '#3b82f6', fontWeight: 600 }}>{row.tid}</span>
+                      <span style={{ flex: 0.8, fontSize: '14px', color: '#10b981', fontWeight: 600 }}>PKR {amt.toLocaleString()}</span>
+                      <span style={{ flex: 1.4, fontSize: '12px' }}>
+                        <div style={{ background: '#f8fafc', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                          <div style={{ color: (beforeBal ?? -amt) < 0 ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
+                            Before: {beforeBal !== null ? (beforeBal < 0 ? `PKR ${Math.abs(beforeBal).toLocaleString()} Dues` : `PKR ${beforeBal.toLocaleString()}`) : `PKR ${amt.toLocaleString()} Dues`}
+                          </div>
+                          <div style={{ color: (afterBal ?? 0) < 0 ? '#dc2626' : '#16a34a', fontWeight: 600, marginTop: '2px' }}>
+                            After: {st === 'approved' ? (afterBal !== null ? (afterBal < 0 ? `PKR ${Math.abs(afterBal).toLocaleString()} Dues` : (afterBal === 0 ? 'PKR 0 (Cleared ✨)' : `PKR ${afterBal.toLocaleString()}`)) : 'PKR 0 (Cleared ✨)') : (st === 'rejected' ? 'Unchanged' : 'Pending')}
+                          </div>
+                        </div>
+                      </span>
+                      <span style={{ flex: 1.1, fontSize: '14px', color: '#3b82f6', fontWeight: 600 }}>{row.tid}</span>
                       <span style={{ flex: 0.8 }}>
                         <span style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600, backgroundColor: badgeBg, color: badgeColor }}>
                           {badgeText}
                         </span>
                       </span>
-                      <span style={{ flex: 1, fontSize: '13px', color: 'var(--text-secondary)' }}>{new Date(row.created_at).toLocaleDateString()}</span>
-                      <div style={{ width: '260px', display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                      <span style={{ flex: 0.9, fontSize: '13px', color: 'var(--text-secondary)' }}>{new Date(row.created_at).toLocaleDateString()}</span>
+                      <div style={{ width: '180px', display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                         {row.slip_url && (
                           <Button variant="secondary" size="sm" onClick={() => { setSelectedSlipUrl(row.slip_url); setSlipModal(true); }}>Slip</Button>
                         )}
