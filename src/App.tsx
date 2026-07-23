@@ -11,6 +11,7 @@ import LocationsPage from './pages/LocationsPage';
 import ServicesPage from './pages/ServicesPage';
 import ProvidersPage from './pages/ProvidersPage';
 import CommissionsPage from './pages/CommissionsPage';
+import ReviewsPage from './pages/ReviewsPage';
 import BookingsPage from './pages/BookingsPage';
 import ComplaintsPage from './pages/ComplaintsPage';
 import CustomersPage from './pages/CustomersPage';
@@ -143,6 +144,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute permission="view_providers">
             <Layout><CommissionsPage /></Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reviews"
+        element={
+          <ProtectedRoute permission="view_providers">
+            <Layout><ReviewsPage /></Layout>
           </ProtectedRoute>
         }
       />
