@@ -16,6 +16,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   '/call-requests':      { title: 'Leads & Calls',       subtitle: 'View inbound call requests and leads' },
   '/business-inquiries': { title: 'Business Inquiries',  subtitle: 'Manage B2B partnership inquiries' },
   '/roles-staff':        { title: 'Roles & Staff',       subtitle: 'Manage admin users and permissions' },
+  '/reviews':            { title: 'Reviews & Ratings',   subtitle: 'View customer feedback and provider ratings' },
 };
 
 interface TopbarProps {
@@ -24,7 +25,7 @@ interface TopbarProps {
 
 const Topbar: React.FC<TopbarProps> = ({ sidebarCollapsed }) => {
   const { pathname } = useLocation();
-  const page = PAGE_TITLES[pathname] ?? { title: 'HSL Admin', subtitle: '' };
+  const page = PAGE_TITLES[pathname] ?? { title: 'Murammat Admin', subtitle: '' };
   const { toggleTheme, isDark } = useTheme();
 
   return (
