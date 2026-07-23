@@ -433,7 +433,7 @@ const CommissionsPage: React.FC = () => {
                       </div>
                     </span>
                     <span style={{ flex: 0.8, fontSize: '14px', color: '#10b981', fontWeight: 600 }}>PKR {parseFloat(row.amount).toLocaleString()}</span>
-                    <span style={{ flex: 1.4, fontSize: '12px' }}>
+                    <span style={{ flex: 1.4 }}>
                       {(() => {
                         const amt = parseFloat(row.amount || 0);
                         const curBal = row.before_balance !== null && row.before_balance !== undefined 
@@ -441,12 +441,28 @@ const CommissionsPage: React.FC = () => {
                           : parseFloat(row.current_wallet_balance || 0);
                         const afterBal = curBal + amt;
                         return (
-                          <div style={{ background: '#f8fafc', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <div style={{ color: curBal < 0 ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
-                              Before: {curBal < 0 ? `PKR ${Math.abs(curBal).toLocaleString()} Dues` : `PKR ${curBal.toLocaleString()}`}
+                          <div style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            background: 'var(--surface-raised)',
+                            padding: '6px 12px',
+                            borderRadius: '10px',
+                            border: '1px solid var(--border)',
+                            boxShadow: '0 1px 4px rgba(0,0,0,0.03)'
+                          }}>
+                            <div>
+                              <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600 }}>Before</div>
+                              <div style={{ fontWeight: 700, color: curBal < 0 ? '#ef4444' : '#10b981', fontSize: '12px' }}>
+                                {curBal < 0 ? `PKR ${Math.abs(curBal).toLocaleString()} Dues` : `PKR ${curBal.toLocaleString()}`}
+                              </div>
                             </div>
-                            <div style={{ color: afterBal < 0 ? '#dc2626' : '#16a34a', fontWeight: 600, marginTop: '2px' }}>
-                              After: {afterBal < 0 ? `PKR ${Math.abs(afterBal).toLocaleString()} Dues` : (afterBal === 0 ? 'PKR 0 (Cleared ✨)' : `PKR ${afterBal.toLocaleString()}`)}
+                            <div style={{ color: '#00674F', fontWeight: 800, fontSize: '13px' }}>➔</div>
+                            <div>
+                              <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600 }}>After Approval</div>
+                              <div style={{ fontWeight: 700, color: afterBal < 0 ? '#ef4444' : '#10b981', fontSize: '12px' }}>
+                                {afterBal < 0 ? `PKR ${Math.abs(afterBal).toLocaleString()} Dues` : (afterBal === 0 ? 'PKR 0 (Cleared ✨)' : `PKR ${afterBal.toLocaleString()}`)}
+                              </div>
                             </div>
                           </div>
                         );
@@ -591,13 +607,31 @@ const CommissionsPage: React.FC = () => {
                         </div>
                       </span>
                       <span style={{ flex: 0.8, fontSize: '14px', color: '#10b981', fontWeight: 600 }}>PKR {amt.toLocaleString()}</span>
-                      <span style={{ flex: 1.4, fontSize: '12px' }}>
-                        <div style={{ background: '#f8fafc', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                          <div style={{ color: (beforeBal ?? -amt) < 0 ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
-                            Before: {beforeBal !== null ? (beforeBal < 0 ? `PKR ${Math.abs(beforeBal).toLocaleString()} Dues` : `PKR ${beforeBal.toLocaleString()}`) : `PKR ${amt.toLocaleString()} Dues`}
+                      <span style={{ flex: 1.4 }}>
+                        <div style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          background: 'var(--surface-raised)',
+                          padding: '6px 12px',
+                          borderRadius: '10px',
+                          border: '1px solid var(--border)',
+                          boxShadow: '0 1px 4px rgba(0,0,0,0.03)'
+                        }}>
+                          <div>
+                            <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600 }}>Before</div>
+                            <div style={{ fontWeight: 700, color: (beforeBal ?? -amt) < 0 ? '#ef4444' : '#10b981', fontSize: '12px' }}>
+                              {beforeBal !== null ? (beforeBal < 0 ? `PKR ${Math.abs(beforeBal).toLocaleString()} Dues` : `PKR ${beforeBal.toLocaleString()}`) : `PKR ${amt.toLocaleString()} Dues`}
+                            </div>
                           </div>
-                          <div style={{ color: (afterBal ?? 0) < 0 ? '#dc2626' : '#16a34a', fontWeight: 600, marginTop: '2px' }}>
-                            After: {st === 'approved' ? (afterBal !== null ? (afterBal < 0 ? `PKR ${Math.abs(afterBal).toLocaleString()} Dues` : (afterBal === 0 ? 'PKR 0 (Cleared ✨)' : `PKR ${afterBal.toLocaleString()}`)) : 'PKR 0 (Cleared ✨)') : (st === 'rejected' ? 'Unchanged' : 'Pending')}
+                          <div style={{ color: '#00674F', fontWeight: 800, fontSize: '13px' }}>➔</div>
+                          <div>
+                            <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600 }}>After</div>
+                            <div style={{ fontWeight: 700, color: (afterBal ?? 0) < 0 ? '#ef4444' : '#10b981', fontSize: '12px' }}>
+                              {st === 'approved' 
+                                ? (afterBal !== null ? (afterBal < 0 ? `PKR ${Math.abs(afterBal).toLocaleString()} Dues` : (afterBal === 0 ? 'PKR 0 (Cleared ✨)' : `PKR ${afterBal.toLocaleString()}`)) : 'PKR 0 (Cleared ✨)') 
+                                : (st === 'rejected' ? 'Unchanged' : 'Pending')}
+                            </div>
                           </div>
                         </div>
                       </span>
