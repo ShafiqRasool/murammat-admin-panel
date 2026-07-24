@@ -1060,16 +1060,50 @@ const ProvidersPage: React.FC = () => {
               {/* Services checklist */}
               <div>
                 <label style={labelStyle}>Select Services / Skills</label>
-                <div style={{ maxHeight: '420px', overflowY: 'auto', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ maxHeight: '420px', overflowY: 'auto', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {categories.map(cat => {
                     const catServices = services.filter(s => s.category_id === cat.id);
                     if (catServices.length === 0) return null;
+                    const catServiceIds = catServices.map(s => s.id);
+                    const allSelected = catServiceIds.length > 0 && catServiceIds.every(id => selectedServices.includes(id));
+                    const countSelected = catServiceIds.filter(id => selectedServices.includes(id)).length;
+
+                    const toggleAllCategoryServices = (checked: boolean) => {
+                      if (checked) {
+                        setSelectedServices(prev => Array.from(new Set([...prev, ...catServiceIds])));
+                      } else {
+                        setSelectedServices(prev => prev.filter(id => !catServiceIds.includes(id)));
+                      }
+                    };
+
                     return (
-                      <div key={cat.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <span style={{ fontSize: '11px', color: '#00a87a', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                          {cat.name}
-                        </span>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                      <div key={cat.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'var(--surface)', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '6px', borderBottom: '1px dashed var(--border)' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={allSelected}
+                              onChange={e => toggleAllCategoryServices(e.target.checked)}
+                              style={{ accentColor: '#00674F', cursor: 'pointer', width: '15px', height: '15px' }}
+                            />
+                            <span style={{ fontSize: '12px', color: '#00a87a', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                              {cat.name}
+                            </span>
+                            {countSelected > 0 && (
+                              <span style={{ fontSize: '11px', background: '#00674F20', color: '#00c896', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                                {countSelected}/{catServices.length} Selected
+                              </span>
+                            )}
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => toggleAllCategoryServices(!allSelected)}
+                            style={{ background: 'none', border: 'none', color: '#00a87a', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                          >
+                            {allSelected ? 'Deselect All' : 'Select All'}
+                          </button>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', paddingTop: '4px' }}>
                           {catServices.map(s => {
                             const isChecked = selectedServices.includes(s.id);
                             return (
