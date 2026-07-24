@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getCustomers, createCustomer, getCustomerBookings, type Customer, type CustomerFilters, type CreateCustomerPayload } from '../api/customer.api';
+import { getComplaints } from '../api/complaint.api';
 import Badge, { statusVariant } from '../components/ui/Badge';
 import { getCategories, type ServiceCategory } from '../api/service.api';
 import { getCities, getAreas, type City, type Area } from '../api/location.api';
@@ -88,6 +90,10 @@ const CustomersPage: React.FC = () => {
   const [totalSpent, setTotalSpent] = useState(0);
   const [totalBookings, setTotalBookings] = useState(0);
 
+  const navigate = useNavigate();
+  const [customerComplaints, setCustomerComplaints] = useState<any[]>([]);
+  const [loadingComplaints, setLoadingComplaints] = useState(false);
+
   useEffect(() => {
     if (selected) {
       setLoadingBookings(true);
@@ -95,8 +101,18 @@ const CustomersPage: React.FC = () => {
         .then(setCustomerBookings)
         .catch(() => toast('Failed to load customer bookings', 'error'))
         .finally(() => setLoadingBookings(false));
+
+      setLoadingComplaints(true);
+      getComplaints({ search: selected.phone || selected.email })
+        .then(res => {
+          const list = Array.isArray(res) ? res : (res?.data || []);
+          setCustomerComplaints(list);
+        })
+        .catch(() => setCustomerComplaints([]))
+        .finally(() => setLoadingComplaints(false));
     } else {
       setCustomerBookings([]);
+      setCustomerComplaints([]);
     }
   }, [selected]);
 
@@ -356,59 +372,132 @@ const CustomersPage: React.FC = () => {
         <Modal
           isOpen={!!selected}
           onClose={() => setSelected(null)}
-          title="Customer Details"
-          subtitle={selected.email}
-          width="560px"
-          footer={<Button variant="ghost" onClick={() => setSelected(null)}>Close</Button>}
+          title={`Customer Profile — ${displayName(selected)}`}
+          subtitle="Complete account overview, order history, and submitted complaints"
+          width="900px"
+          footer={
+            <div style={{ display: 'flex', gap: '8px', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Button variant="ghost" onClick={() => setSelected(null)}>Close</Button>
+              <Button
+                variant="secondary"
+                style={{ background: '#00674F15', border: '1px solid #00674F50', color: '#00c896', fontWeight: 700 }}
+                onClick={() => {
+                  const q = selected.phone || selected.email || displayName(selected);
+                  setSelected(null);
+                  navigate(`/bookings?search=${encodeURIComponent(q)}`);
+                }}
+              >
+                📋 View Complete Order Details / Bookings ➔
+              </Button>
+            </div>
+          }
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-              <MiniStat label="Total Bookings" value={selected.total_bookings} color="#0891b2" />
-              <MiniStat label="Completed" value={selected.completed_bookings} color="#00c896" />
-              <MiniStat label="Cancelled" value={selected.cancelled_bookings} color="#dc2626" />
-            </div>
-            <div style={{ background: 'var(--input-bg)', border: '1px solid #00674F40', borderRadius: '12px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Total Amount Spent</span>
-              <span style={{ fontSize: '22px', fontWeight: 800, color: '#00c896' }}>{fmt(selected.total_spent)}</span>
-            </div>
-            {[
-              { label: 'Full Name', value: displayName(selected) },
-              { label: 'Email', value: selected.email },
-              { label: 'Phone', value: selected.phone || '—' },
-              { label: 'Address', value: selected.address_line1 || '—' },
-              { label: 'City', value: selected.city_name || '—' },
-              { label: 'Area', value: selected.area_name || '—' },
-              { label: 'Reg. Method', value: selected.registration_method === 'manual' ? 'Manually Entered' : 'Registered User' },
-              { label: 'Registered', value: new Date(selected.created_at).toLocaleString() },
-              { label: 'Last Booking', value: selected.last_booking_at ? new Date(selected.last_booking_at).toLocaleString() : 'Never' },
-            ].map(({ label, value }) => (
-              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #1e3d3050' }}>
-                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
-                <span style={{ fontSize: '13px', color: 'var(--text-primary)', textAlign: 'right', maxWidth: '65%', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: '75vh', overflowY: 'auto', paddingRight: '4px' }}>
+            {/* Customer Header Banner */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '18px', background: 'var(--surface-raised)', borderRadius: '14px', border: '1px solid var(--border)' }}>
+              <div style={{
+                width: '60px', height: '60px', borderRadius: '50%',
+                background: '#0891b225', color: '#0891b2',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '22px', fontWeight: 800, border: '2px solid #0891b250', flexShrink: 0,
+              }}>
+                {avatarLetter(selected)}
               </div>
-            ))}
+              <div style={{ flex: 1 }}>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)' }}>{displayName(selected)}</h3>
+                <div style={{ display: 'flex', gap: '16px', marginTop: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                  <span>📞 {selected.phone || '—'}</span>
+                  <span>✉️ {selected.email || '—'}</span>
+                  <span>📍 {selected.city_name || 'City'}, {selected.area_name || 'Area'}</span>
+                </div>
+              </div>
+              <Badge variant="success">{selected.registration_method === 'manual' ? 'MANUAL USER' : 'REGISTERED APP USER'}</Badge>
+            </div>
 
-            <div style={{ marginTop: '16px' }}>
-              <h4 style={{ color: 'var(--text-primary)', fontSize: '14px', margin: '0 0 12px' }}>Order History</h4>
+            {/* Metrics Row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+              <div style={{ background: 'var(--input-bg)', borderRadius: '12px', padding: '14px', border: '1px solid var(--border)', textAlign: 'center' }}>
+                <div style={{ fontSize: '20px', fontWeight: 800, color: '#0891b2' }}>{selected.total_bookings}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: 600 }}>Total Bookings</div>
+              </div>
+              <div style={{ background: 'var(--input-bg)', borderRadius: '12px', padding: '14px', border: '1px solid var(--border)', textAlign: 'center' }}>
+                <div style={{ fontSize: '20px', fontWeight: 800, color: '#10b981' }}>{selected.completed_bookings}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: 600 }}>Completed Jobs</div>
+              </div>
+              <div style={{ background: 'var(--input-bg)', borderRadius: '12px', padding: '14px', border: '1px solid var(--border)', textAlign: 'center' }}>
+                <div style={{ fontSize: '20px', fontWeight: 800, color: '#00c896' }}>{fmt(selected.total_spent)}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: 600 }}>Total Amount Spent</div>
+              </div>
+              <div style={{ background: 'var(--input-bg)', borderRadius: '12px', padding: '14px', border: '1px solid var(--border)', textAlign: 'center' }}>
+                <div style={{ fontSize: '20px', fontWeight: 800, color: customerComplaints.length > 0 ? '#ef4444' : '#10b981' }}>{customerComplaints.length}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: 600 }}>Complaints Filed</div>
+              </div>
+            </div>
+
+            {/* Bookings & Order History */}
+            <div style={{ padding: '16px', background: 'var(--input-bg)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <span style={{ fontSize: '12px', color: '#00a87a', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  📦 Recent Bookings & Order History
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  style={{ fontSize: '12px', color: '#00c896' }}
+                  onClick={() => {
+                    const q = selected.phone || selected.email || displayName(selected);
+                    setSelected(null);
+                    navigate(`/bookings?search=${encodeURIComponent(q)}`);
+                  }}
+                >
+                  View All in Bookings Tab ➔
+                </Button>
+              </div>
               {loadingBookings ? (
-                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Loading orders...</div>
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Loading orders…</div>
               ) : customerBookings.length === 0 ? (
-                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>No orders found for this customer.</div>
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No orders recorded for this customer.</div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '250px', overflowY: 'auto', paddingRight: '4px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto' }}>
                   {customerBookings.map(b => (
-                    <div key={b.id} style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Order #{b.id.split('-')[0].toUpperCase()}</span>
+                    <div key={b.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 14px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Order #{b.id.split('-')[0].toUpperCase()}</span>
                         <Badge variant={statusVariant(b.status)}>{b.status.replace('_', ' ')}</Badge>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                        <span>{new Date(b.created_at).toLocaleDateString()}</span>
-                        <span style={{ color: '#00c896', fontWeight: 600 }}>PKR {b.total_amount?.toLocaleString() || 0}</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                        <span>📅 {new Date(b.created_at).toLocaleDateString()} — Provider: {b.provider_name || 'Unassigned'}</span>
+                        <span style={{ color: '#00c896', fontWeight: 700 }}>PKR {b.total_amount?.toLocaleString() || 0}</span>
                       </div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
-                        Provider: <span style={{ color: b.provider_name ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{b.provider_name || 'Unassigned'}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Customer Complaints Submitted */}
+            <div style={{ padding: '16px', background: 'var(--input-bg)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <span style={{ fontSize: '12px', color: '#ef4444', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  🚨 Submitted Complaints ({customerComplaints.length})
+                </span>
+              </div>
+              {loadingComplaints ? (
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Loading complaints…</div>
+              ) : customerComplaints.length === 0 ? (
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No complaints filed by this customer.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
+                  {customerComplaints.map((comp: any) => (
+                    <div key={comp.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 14px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>Complaint #{comp.id.toString().slice(0, 8)}</span>
+                        <Badge variant={comp.status === 'resolved' ? 'success' : 'error'}>
+                          {comp.status ? comp.status.toUpperCase() : 'PENDING'}
+                        </Badge>
                       </div>
+                      <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{comp.message || 'No description provided.'}</p>
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>{new Date(comp.created_at).toLocaleDateString()}</div>
                     </div>
                   ))}
                 </div>

@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getProviders, approveProvider, createProvider, updateProvider, uploadProviderImage, deleteProvider, type Provider, type ApprovalStatus, type CreateProviderPayload } from '../api/provider.api';
+import { getAdminReviews } from '../api/review.api';
 import ImageUploadWithCrop from '../components/ui/ImageUploadWithCrop';
 import Badge, { statusVariant } from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -70,10 +72,27 @@ const ProvidersPage: React.FC = () => {
     setCurrentPage(1);
   }, [activeTab, debouncedSearch]);
 
+  const navigate = useNavigate();
+
   // ── Detail & action modals ──
   const [detailModal, setDetailModal] = useState(false);
   const [selected, setSelected]       = useState<Provider | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+
+  const [providerReviews, setProviderReviews] = useState<any[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+
+  useEffect(() => {
+    if (selected && detailModal) {
+      setLoadingReviews(true);
+      getAdminReviews({ search: selected.phone || selected.company_name || selected.first_name || undefined })
+        .then(res => setProviderReviews(res.reviews || res.data || []))
+        .catch(() => setProviderReviews([]))
+        .finally(() => setLoadingReviews(false));
+    } else {
+      setProviderReviews([]);
+    }
+  }, [selected, detailModal]);
 
   // ── Manual Add Modal State ──
   const [addOpen, setAddOpen] = useState(false);
@@ -165,7 +184,7 @@ const ProvidersPage: React.FC = () => {
     setAreaSearch('');
     setSelectedServices(p.service_ids || []);
     setProfileImageFile(null);
-    setProfileImagePreview(p.profile_image || null);
+    setProfileImagePreview(p.profile_image);
     setShowPassword(false);
     setAddOpen(true);
   };
@@ -596,13 +615,26 @@ const ProvidersPage: React.FC = () => {
         <Modal
           isOpen={detailModal}
           onClose={() => setDetailModal(false)}
-          title="Provider Details"
-          subtitle="Review provider information before approving"
-          width="560px"
+          title={`Provider Profile — ${providerDisplayName(selected)}`}
+          subtitle="Complete performance overview, reviews, skills, and account management"
+          width="900px"
           footer={
-            <div style={{ display: 'flex', gap: '8px', width: '100%', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', gap: '8px', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <Button variant="ghost" onClick={() => setDetailModal(false)}>Close</Button>
+                <Button
+                  variant="secondary"
+                  style={{ background: '#00674F15', border: '1px solid #00674F50', color: '#00c896', fontWeight: 700 }}
+                  onClick={() => {
+                    setDetailModal(false);
+                    const q = selected.phone || selected.company_name || selected.first_name || '';
+                    navigate(`/bookings?search=${encodeURIComponent(q)}`);
+                  }}
+                >
+                  📋 View Complete Order Details / Bookings ➔
+                </Button>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
                 <Button
                   variant="danger"
                   loading={actionLoading}
@@ -611,17 +643,15 @@ const ProvidersPage: React.FC = () => {
                     await handleDelete(selected.provider_id, selected.company_name || 'this provider');
                   }}
                 >
-                  Delete Provider
+                  Delete
                 </Button>
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
                 {selected.approval_status !== 'rejected' && (
                   <Button
                     variant="danger"
                     loading={actionLoading}
                     onClick={() => handleAction(selected.provider_id, 'rejected')}
                   >
-                    Reject Provider
+                    Reject
                   </Button>
                 )}
                 {selected.approval_status !== 'approved' && (
@@ -637,14 +667,14 @@ const ProvidersPage: React.FC = () => {
             </div>
           }
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {/* Header profile card */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: 'var(--input-bg)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: '75vh', overflowY: 'auto', paddingRight: '4px' }}>
+            {/* Top Banner profile card */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '18px', background: 'var(--surface-raised)', borderRadius: '14px', border: '1px solid var(--border)' }}>
               <div style={{
-                width: '54px', height: '54px', borderRadius: '50%',
+                width: '64px', height: '64px', borderRadius: '50%',
                 background: '#00674F25', color: '#00a87a',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '20px', fontWeight: 800, border: '1px solid #00674F40', flexShrink: 0,
+                fontSize: '24px', fontWeight: 800, border: '2px solid #00674F50', flexShrink: 0,
                 overflow: 'hidden',
               }}>
                 {selected.profile_image ? (
@@ -654,70 +684,128 @@ const ProvidersPage: React.FC = () => {
                 )}
               </div>
               <div style={{ flex: 1 }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>{providerDisplayName(selected)}</h3>
-                <p style={{ margin: '2px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>{selected.company_name || 'Individual'}</p>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)' }}>{providerDisplayName(selected)}</h3>
+                <p style={{ margin: '2px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                  {selected.company_name && selected.company_name.toLowerCase() !== 'individual' ? selected.company_name : 'Sole Technician / Individual'}
+                </p>
+                <div style={{ display: 'flex', gap: '16px', marginTop: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                  <span>📞 {selected.phone || '—'}</span>
+                  <span>✉️ {selected.user_email || selected.email || '—'}</span>
+                  <span>🆔 CNIC: {selected.cnic || '—'}</span>
+                </div>
               </div>
               <Badge variant={statusVariant(selected.approval_status)}>{selected.approval_status}</Badge>
             </div>
 
-            {/* Info Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div style={{ padding: '12px', background: '#0d241c50', borderRadius: '10px', border: '1px solid #1e3d3030' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Email Address</span>
-                <span style={{ fontSize: '13px', color: 'var(--text-primary)', wordBreak: 'break-all' }}>{selected.user_email || selected.email || '—'}</span>
+            {/* Performance & Financial Metrics Row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+              <div style={{ background: 'var(--input-bg)', borderRadius: '12px', padding: '14px', border: '1px solid var(--border)', textAlign: 'center' }}>
+                <div style={{ fontSize: '20px', fontWeight: 800, color: '#f59e0b' }}>
+                  ⭐ {parseFloat((selected.rating as any) || '0').toFixed(1)}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: 600 }}>
+                  Rating ({selected.total_reviews || 0} reviews)
+                </div>
               </div>
-              <div style={{ padding: '12px', background: '#0d241c50', borderRadius: '10px', border: '1px solid #1e3d3030' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Phone Number</span>
-                <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{selected.phone || '—'}</span>
+              <div style={{ background: 'var(--input-bg)', borderRadius: '12px', padding: '14px', border: '1px solid var(--border)', textAlign: 'center' }}>
+                <div style={{ fontSize: '20px', fontWeight: 800, color: '#3b82f6' }}>
+                  💼 {selected.total_jobs || 0}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: 600 }}>
+                  Total Completed Jobs
+                </div>
               </div>
-              <div style={{ padding: '12px', background: '#0d241c50', borderRadius: '10px', border: '1px solid #1e3d3030' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>CNIC Number</span>
-                <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{selected.cnic || '—'}</span>
+              <div style={{ background: 'var(--input-bg)', borderRadius: '12px', padding: '14px', border: '1px solid var(--border)', textAlign: 'center' }}>
+                <div style={{ fontSize: '20px', fontWeight: 800, color: '#10b981' }}>
+                  PKR {parseFloat((selected.total_gross_earnings as any) || '0').toLocaleString()}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: 600 }}>
+                  Gross Earnings
+                </div>
               </div>
-              <div style={{ padding: '12px', background: '#0d241c50', borderRadius: '10px', border: '1px solid #1e3d3030' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Registration Date</span>
-                <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{new Date(selected.created_at).toLocaleDateString()}</span>
+              <div style={{ background: 'var(--input-bg)', borderRadius: '12px', padding: '14px', border: '1px solid var(--border)', textAlign: 'center' }}>
+                <div style={{ fontSize: '20px', fontWeight: 800, color: parseFloat((selected.wallet_balance as any) || '0') < 0 ? '#ef4444' : '#10b981' }}>
+                  {parseFloat((selected.wallet_balance as any) || '0') < 0 ? `PKR ${Math.abs(parseFloat((selected.wallet_balance as any) || '0')).toLocaleString()} Dues` : `PKR ${parseFloat((selected.wallet_balance as any) || '0').toLocaleString()}`}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: 600 }}>
+                  Wallet Balance
+                </div>
               </div>
             </div>
 
-            {/* Address / Service Areas */}
-            <div style={{ padding: '16px', background: '#0d241c50', borderRadius: '10px', border: '1px solid #1e3d3030' }}>
-              <span style={{ fontSize: '11px', color: '#00a87a', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '8px', letterSpacing: '0.5px' }}>Service Areas / Address</span>
-              {selected.area_ids && selected.area_ids.length > 0 ? (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {selected.area_ids.map(aid => {
-                    const area = allAreas.find(a => a.id === aid);
-                    if (!area) return null;
-                    const city = citiesList.find(c => c.id === area.city_id);
-                    return (
-                      <span key={aid} style={{ padding: '4px 10px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', color: 'var(--text-primary)' }}>
-                        📍 {area.name} ({city ? city.name : 'Unknown City'})
-                      </span>
-                    );
-                  })}
-                </div>
-              ) : (
-                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>No service areas assigned.</span>
-              )}
+            {/* Service Areas & Skills Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div style={{ padding: '14px', background: 'var(--input-bg)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                <span style={{ fontSize: '11px', color: '#00a87a', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '8px', letterSpacing: '0.5px' }}>
+                  📍 Assigned Coverage Areas
+                </span>
+                {selected.area_ids && selected.area_ids.length > 0 ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {selected.area_ids.map(aid => {
+                      const area = allAreas.find(a => a.id === aid);
+                      if (!area) return null;
+                      const city = citiesList.find(c => c.id === area.city_id);
+                      return (
+                        <span key={aid} style={{ padding: '4px 10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', color: 'var(--text-primary)' }}>
+                          📍 {area.name} ({city ? city.name : 'City'})
+                        </span>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>No service areas assigned.</span>
+                )}
+              </div>
+
+              <div style={{ padding: '14px', background: 'var(--input-bg)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                <span style={{ fontSize: '11px', color: '#00a87a', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '8px', letterSpacing: '0.5px' }}>
+                  🛠️ Offered Services & Skills
+                </span>
+                {selected.service_ids && selected.service_ids.length > 0 ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {selected.service_ids.map(sid => {
+                      const service = services.find(s => s.id === sid);
+                      if (!service) return null;
+                      return (
+                        <span key={sid} style={{ padding: '4px 10px', background: '#00674F15', border: '1px solid #00674F40', borderRadius: '6px', fontSize: '12px', color: '#00c896', fontWeight: 600 }}>
+                          🛠️ {service.name}
+                        </span>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>No services selected.</span>
+                )}
+              </div>
             </div>
 
-            {/* Services & Skills */}
-            <div style={{ padding: '16px', background: '#0d241c50', borderRadius: '10px', border: '1px solid #1e3d3030' }}>
-              <span style={{ fontSize: '11px', color: '#00a87a', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '8px', letterSpacing: '0.5px' }}>Offered Services & Skills</span>
-              {selected.service_ids && selected.service_ids.length > 0 ? (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {selected.service_ids.map(sid => {
-                    const service = services.find(s => s.id === sid);
-                    if (!service) return null;
-                    return (
-                      <span key={sid} style={{ padding: '4px 10px', background: '#00674F15', border: '1px solid #00674F40', borderRadius: '6px', fontSize: '12px', color: '#00c896', fontWeight: 600 }}>
-                        🛠️ {service.name}
-                      </span>
-                    );
-                  })}
-                </div>
+            {/* Customer Reviews & Feedback Received */}
+            <div style={{ padding: '16px', background: 'var(--input-bg)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <span style={{ fontSize: '12px', color: '#f59e0b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  ⭐ Customer Reviews & Feedback
+                </span>
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  Total: {providerReviews.length}
+                </span>
+              </div>
+              {loadingReviews ? (
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Loading reviews…</div>
+              ) : providerReviews.length === 0 ? (
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No reviews recorded yet for this provider.</div>
               ) : (
-                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>No services selected.</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '200px', overflowY: 'auto' }}>
+                  {providerReviews.map((r: any) => (
+                    <div key={r.id} style={{ padding: '10px 12px', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)' }}>{r.customer_name || 'Customer'}</span>
+                        <span style={{ color: '#f59e0b', fontWeight: 700, fontSize: '13px' }}>⭐ {parseFloat(r.rating || 0).toFixed(1)}</span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{r.comment || 'No written comment.'}</p>
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>{new Date(r.created_at).toLocaleDateString()}</div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>

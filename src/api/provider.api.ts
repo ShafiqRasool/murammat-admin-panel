@@ -18,6 +18,11 @@ export interface Provider {
   city_ids: string[];
   cnic: string | null;
   profile_image: string | null;
+  rating?: number | string;
+  total_reviews?: number;
+  total_jobs?: number;
+  total_gross_earnings?: number | string;
+  wallet_balance?: number | string;
 }
 
 export type ApprovalStatus = 'approved' | 'rejected' | 'unapproved' | 'pending';
