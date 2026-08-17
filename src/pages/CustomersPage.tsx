@@ -215,7 +215,7 @@ const CustomersPage: React.FC = () => {
         await deleteCustomer(c.id);
         toast('Customer deleted successfully', 'success');
         if (selected?.id === c.id) setSelected(null);
-        fetchData();
+        load();
       } catch (err: any) {
         const msg = err?.response?.data?.error ?? 'Failed to delete customer';
         toast(msg, 'error');
