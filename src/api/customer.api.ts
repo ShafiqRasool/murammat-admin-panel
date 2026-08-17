@@ -60,3 +60,7 @@ export const getCustomerBookings = (id: string) =>
 export const createCustomer = (payload: CreateCustomerPayload) =>
   api.post<Customer>('/admin/customers', payload).then(r => r.data);
 
+export const deleteCustomer = (id: string) =>
+  api.delete<{ message: string }>(`/admin/customers/${id}`).then(r => r.data);
+
+

@@ -2,12 +2,15 @@ import api from './axios';
 
 // ─── Types ─────────────────────────────────────────────────────────────
 
+export type ServiceStatus = 'active' | 'hidden' | 'temporarily_unavailable';
+
 export interface ParentCategory {
   id: string;
   name: string;
   description: string | null;
   image_url?: string | null;
   image_urls?: string[] | null;
+  status?: ServiceStatus;
   created_at: string;
 }
 
@@ -18,6 +21,7 @@ export interface ServiceCategory {
   long_description?: string | null;
   image_url?: string | null;
   parent_category_id: string;
+  status?: ServiceStatus;
   created_at: string;
 }
 
@@ -38,6 +42,7 @@ export interface Service {
   is_quotation_only: boolean;
   parent_category_id: string;
   image_url?: string | null;
+  status?: ServiceStatus;
   created_at: string;
 }
 
@@ -55,6 +60,7 @@ export interface ServicePayload {
   can_be_repaired?: boolean;
   is_quotation_only?: boolean;
   parent_category_id: string;
+  status?: ServiceStatus;
 }
 
 // ─── Parent Categories ──────────────────────────────────────────────────
@@ -62,10 +68,10 @@ export interface ServicePayload {
 export const getParentCategories = (filters?: { page?: number; limit?: number; search?: string }) =>
   api.get<any>('/admin/services/parent-categories', { params: filters }).then(r => r.data);
 
-export const addParentCategory = (name: string, description?: string) =>
-  api.post('/admin/services/parent-categories', { name, description }).then(r => r.data);
+export const addParentCategory = (name: string, description?: string, status: ServiceStatus = 'active') =>
+  api.post('/admin/services/parent-categories', { name, description, status }).then(r => r.data);
 
-export const updateParentCategory = (id: string, data: { name?: string; description?: string }) =>
+export const updateParentCategory = (id: string, data: { name?: string; description?: string; status?: ServiceStatus }) =>
   api.put(`/admin/services/parent-categories/${id}`, data).then(r => r.data);
 
 export const deleteParentCategory = (id: string) =>
@@ -76,10 +82,10 @@ export const deleteParentCategory = (id: string) =>
 export const getCategories = (filters?: { parent_category_id?: string; page?: number; limit?: number; search?: string }) =>
   api.get<any>('/admin/services/categories', { params: filters }).then(r => r.data);
 
-export const addCategory = (name: string, parent_category_id: string, description?: string, long_description?: string) =>
-  api.post('/admin/services/categories', { name, parent_category_id, description, long_description }).then(r => r.data);
+export const addCategory = (name: string, parent_category_id: string, description?: string, long_description?: string, status: ServiceStatus = 'active') =>
+  api.post('/admin/services/categories', { name, parent_category_id, description, long_description, status }).then(r => r.data);
 
-export const updateCategory = (id: string, data: { name?: string; description?: string; long_description?: string; parent_category_id?: string; }) =>
+export const updateCategory = (id: string, data: { name?: string; description?: string; long_description?: string; parent_category_id?: string; status?: ServiceStatus }) =>
   api.put(`/admin/services/categories/${id}`, data).then(r => r.data);
 
 export const deleteCategory = (id: string) =>

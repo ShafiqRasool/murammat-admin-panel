@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getCustomers, createCustomer, getCustomerBookings, type Customer, type CustomerFilters, type CreateCustomerPayload } from '../api/customer.api';
+import { getCustomers, createCustomer, deleteCustomer, getCustomerBookings, type Customer, type CustomerFilters, type CreateCustomerPayload } from '../api/customer.api';
 import { getComplaints } from '../api/complaint.api';
 import Badge, { statusVariant } from '../components/ui/Badge';
 import { getCategories, type ServiceCategory } from '../api/service.api';
@@ -208,6 +208,21 @@ const CustomersPage: React.FC = () => {
     }
   };
 
+  const handleDeleteCustomer = async (c: Customer, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (window.confirm(`Are you sure you want to delete customer "${displayName(c)}"?\nThis action cannot be undone.`)) {
+      try {
+        await deleteCustomer(c.id);
+        toast('Customer deleted successfully', 'success');
+        if (selected?.id === c.id) setSelected(null);
+        fetchData();
+      } catch (err: any) {
+        const msg = err?.response?.data?.error ?? 'Failed to delete customer';
+        toast(msg, 'error');
+      }
+    }
+  };
+
   return (
     <div style={{ animation: 'fadeIn 0.25s ease-out' }}>
 
@@ -355,6 +370,23 @@ const CustomersPage: React.FC = () => {
               <div style={{ flex: 0.9, fontSize: '11px', color: 'var(--text-muted)' }}>
                 {new Date(c.created_at).toLocaleDateString()}
               </div>
+              <div style={{ width: '36px', textAlign: 'center' }}>
+                <button
+                  type="button"
+                  title="Delete Customer"
+                  onClick={(e) => handleDeleteCustomer(c, e)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#ef4444',
+                    cursor: 'pointer',
+                    fontSize: '15px',
+                    padding: '4px'
+                  }}
+                >
+                  🗑️
+                </button>
+              </div>
             </div>
           ))
         )}
@@ -377,7 +409,25 @@ const CustomersPage: React.FC = () => {
           width="900px"
           footer={
             <div style={{ display: 'flex', gap: '8px', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Button variant="ghost" onClick={() => setSelected(null)}>Close</Button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <Button variant="ghost" onClick={() => setSelected(null)}>Close</Button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteCustomer(selected)}
+                  style={{
+                    background: '#dc2626',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '8px 16px',
+                    fontWeight: 600,
+                    fontSize: '13px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Delete Account
+                </button>
+              </div>
               <Button
                 variant="secondary"
                 style={{ background: '#00674F15', border: '1px solid #00674F50', color: '#00c896', fontWeight: 700 }}

@@ -3,13 +3,40 @@ import {
   getCategories, addCategory, updateCategory, deleteCategory, uploadCategoryImage,
   getServices, addService, updateService, deleteService, uploadServiceImage,
   getParentCategories, addParentCategory, updateParentCategory, deleteParentCategory, uploadParentCategoryImage, uploadParentCategoryImages,
-  type ServiceCategory, type Service, type ParentCategory,
+  type ServiceCategory, type Service, type ParentCategory, type ServiceStatus
 } from '../api/service.api';
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
 import Table from '../components/ui/Table';
 import { toast } from '../components/ui/Toast';
 import ImageUploadWithCrop from '../components/ui/ImageUploadWithCrop';
+
+// ─── Status Inline Selector ─────────────────────────────────────────────
+const StatusInlineSelect: React.FC<{
+  status?: ServiceStatus;
+  onSelect: (newStatus: ServiceStatus) => void;
+}> = ({ status = 'active', onSelect }) => (
+  <select
+    value={status}
+    onChange={(e) => onSelect(e.target.value as ServiceStatus)}
+    onClick={(e) => e.stopPropagation()}
+    style={{
+      padding: '4px 8px',
+      borderRadius: '8px',
+      fontSize: '12px',
+      fontWeight: 600,
+      cursor: 'pointer',
+      outline: 'none',
+      border: status === 'temporarily_unavailable' ? '1px solid #fed7aa' : status === 'hidden' ? '1px solid #fca5a5' : '1px solid #86efac',
+      background: status === 'temporarily_unavailable' ? '#ffedd5' : status === 'hidden' ? '#fee2e2' : '#dcfce7',
+      color: status === 'temporarily_unavailable' ? '#c2410c' : status === 'hidden' ? '#b91c1c' : '#15803d',
+    }}
+  >
+    <option value="active">🟢 Active</option>
+    <option value="temporarily_unavailable">🟡 Unavailable</option>
+    <option value="hidden">🔴 Hidden</option>
+  </select>
+);
 
 // ─── Shared styles ──────────────────────────────────────────────────────
 const inputStyle: React.CSSProperties = {
@@ -226,6 +253,7 @@ const ServicesPage: React.FC = () => {
   const [editParentCat, setEditParentCat] = useState<ParentCategory | null>(null);
   const [parentCatName, setParentCatName] = useState('');
   const [parentCatDesc, setParentCatDesc] = useState('');
+  const [parentCatStatus, setParentCatStatus] = useState<ServiceStatus>('active');
   const [parentCatImageFile, setParentCatImageFile] = useState<File | null>(null);
   const [parentCatImagePreview, setParentCatImagePreview] = useState<string | null>(null);
   const [parentCatImageFiles, setParentCatImageFiles] = useState<File[]>([]);
@@ -239,6 +267,7 @@ const ServicesPage: React.FC = () => {
   const [catParentCatId, setCatParentCatId] = useState('');
   const [catDesc, setCatDesc]       = useState('');
   const [catLongDesc, setCatLongDesc] = useState('');
+  const [catStatus, setCatStatus]   = useState<ServiceStatus>('active');
   const [catImageFile, setCatImageFile] = useState<File | null>(null);
   const [catImagePreview, setCatImagePreview] = useState<string | null>(null);
   const [catSaving, setCatSaving]   = useState(false);
@@ -258,6 +287,7 @@ const ServicesPage: React.FC = () => {
   const [svcIsTop, setSvcIsTop]         = useState(false);
   const [svcCanBeRepaired, setSvcCanBeRepaired] = useState(false);
   const [svcIsQuotationOnly, setSvcIsQuotationOnly] = useState(false);
+  const [svcStatus, setSvcStatus]       = useState<ServiceStatus>('active');
   const [svcImageFile, setSvcImageFile] = useState<File | null>(null);
   const [svcImagePreview, setSvcImagePreview] = useState<string | null>(null);
   const [svcSaving, setSvcSaving]       = useState(false);
@@ -359,12 +389,46 @@ const ServicesPage: React.FC = () => {
     if (tab === 'services') loadSvcs();
   }, [tab, loadParentCats, loadCats, loadSvcs]);
 
+  // ── Inline Status Change Handlers ──
+  const handleParentCatStatusChange = async (id: string, newStatus: ServiceStatus) => {
+    try {
+      await updateParentCategory(id, { status: newStatus });
+      toast('Parent category status updated');
+      loadParentCats();
+      loadAllParentCats();
+    } catch (e: any) {
+      toast(e?.response?.data?.error || 'Failed to update status', 'error');
+    }
+  };
+
+  const handleCatStatusChange = async (id: string, newStatus: ServiceStatus) => {
+    try {
+      await updateCategory(id, { status: newStatus });
+      toast('Sub category status updated');
+      loadCats();
+      loadAllCats();
+    } catch (e: any) {
+      toast(e?.response?.data?.error || 'Failed to update status', 'error');
+    }
+  };
+
+  const handleSvcStatusChange = async (id: string, newStatus: ServiceStatus) => {
+    try {
+      await updateService(id, { status: newStatus });
+      toast('Service status updated');
+      loadSvcs();
+    } catch (e: any) {
+      toast(e?.response?.data?.error || 'Failed to update status', 'error');
+    }
+  };
+
   // ── Parent Category CRUD ──
-  const openAddParentCat  = () => { setEditParentCat(null); setParentCatName(''); setParentCatDesc(''); setParentCatImageFile(null); setParentCatImagePreview(null); setParentCatImageFiles([]); setParentCatImagePreviews([]); setParentCatModal(true); };
+  const openAddParentCat  = () => { setEditParentCat(null); setParentCatName(''); setParentCatDesc(''); setParentCatStatus('active'); setParentCatImageFile(null); setParentCatImagePreview(null); setParentCatImageFiles([]); setParentCatImagePreviews([]); setParentCatModal(true); };
   const openEditParentCat = (c: ParentCategory) => { 
     setEditParentCat(c); 
     setParentCatName(c.name); 
     setParentCatDesc(c.description ?? ''); 
+    setParentCatStatus(c.status || 'active');
     setParentCatImagePreview(c.image_url ? (c.image_url.startsWith('http') ? c.image_url : `${mediaBaseUrl}${c.image_url}`) : null);
     setParentCatImageFile(null);
     const urls = c.image_urls ? c.image_urls.map(url => url.startsWith('http') ? url : `${mediaBaseUrl}${url}`) : [];
@@ -377,8 +441,8 @@ const ServicesPage: React.FC = () => {
     setParentCatSaving(true);
     try {
       let res: any;
-      if (editParentCat) res = await updateParentCategory(editParentCat.id, { name: parentCatName, description: parentCatDesc });
-      else res = await addParentCategory(parentCatName, parentCatDesc);
+      if (editParentCat) res = await updateParentCategory(editParentCat.id, { name: parentCatName, description: parentCatDesc, status: parentCatStatus });
+      else res = await addParentCategory(parentCatName, parentCatDesc, parentCatStatus);
       
       const parentCatId = editParentCat ? editParentCat.id : res.parent_category?.id;
       if (parentCatImageFile && parentCatId) {
@@ -393,13 +457,14 @@ const ServicesPage: React.FC = () => {
   };
 
   // ── Category CRUD ──
-  const openAddCat  = () => { setEditCat(null); setCatName(''); setCatParentCatId(''); setCatDesc(''); setCatLongDesc(''); setCatImageFile(null); setCatImagePreview(null); setCatModal(true); };
+  const openAddCat  = () => { setEditCat(null); setCatName(''); setCatParentCatId(''); setCatDesc(''); setCatLongDesc(''); setCatStatus('active'); setCatImageFile(null); setCatImagePreview(null); setCatModal(true); };
   const openEditCat = (c: ServiceCategory) => { 
     setEditCat(c); 
     setCatName(c.name); 
     setCatParentCatId(c.parent_category_id ?? ''); 
     setCatDesc(c.description ?? ''); 
     setCatLongDesc(c.long_description ?? '');
+    setCatStatus(c.status || 'active');
     setCatImagePreview(c.image_url ? (c.image_url.startsWith('http') ? c.image_url : `${mediaBaseUrl}${c.image_url}`) : null);
     setCatImageFile(null);
     setCatModal(true); 
@@ -409,8 +474,8 @@ const ServicesPage: React.FC = () => {
     setCatSaving(true);
     try {
       let res: any;
-      if (editCat) res = await updateCategory(editCat.id, { name: catName, parent_category_id: catParentCatId, description: catDesc, long_description: catLongDesc });
-      else res = await addCategory(catName, catParentCatId, catDesc, catLongDesc);
+      if (editCat) res = await updateCategory(editCat.id, { name: catName, parent_category_id: catParentCatId, description: catDesc, long_description: catLongDesc, status: catStatus });
+      else res = await addCategory(catName, catParentCatId, catDesc, catLongDesc, catStatus);
       
       const categoryId = editCat ? editCat.id : res.category?.id;
       if (catImageFile && categoryId) {
@@ -428,6 +493,7 @@ const ServicesPage: React.FC = () => {
     setSvcIncludes([]); setSvcExcludes([]);
     setSvcImageFile(null); setSvcImagePreview(null);
     setSvcIsTop(false); setSvcCanBeRepaired(false); setSvcIsQuotationOnly(false);
+    setSvcStatus('active');
   };
 
   const openAddSvc = () => { setEditSvc(null); resetSvcForm(); setSvcModal(true); };
@@ -446,6 +512,7 @@ const ServicesPage: React.FC = () => {
     setSvcIsTop(s.is_top_service ?? false);
     setSvcCanBeRepaired(s.can_be_repaired ?? false);
     setSvcIsQuotationOnly(s.is_quotation_only ?? false);
+    setSvcStatus(s.status || 'active');
     setSvcImagePreview(s.image_url ? (s.image_url.startsWith('http') ? s.image_url : `${mediaBaseUrl}${s.image_url}`) : null);
     setSvcModal(true);
   };
@@ -454,7 +521,7 @@ const ServicesPage: React.FC = () => {
     if (!svcName.trim() || !svcCatId || !svcParentCatId) return toast('Fields are required', 'warning');
     setSvcSaving(true);
     try {
-      const payload = { category_id: svcCatId, parent_category_id: svcParentCatId, name: svcName, small_description: svcSmallDesc, description: svcDesc, base_price: parseFloat(svcPrice) || 0, discounted_price: svcDiscount ? parseFloat(svcDiscount) : null, includes: svcIncludes, not_includes: svcExcludes, is_top_service: svcIsTop, can_be_repaired: svcCanBeRepaired, is_quotation_only: svcIsQuotationOnly };
+      const payload = { category_id: svcCatId, parent_category_id: svcParentCatId, name: svcName, small_description: svcSmallDesc, description: svcDesc, base_price: parseFloat(svcPrice) || 0, discounted_price: svcDiscount ? parseFloat(svcDiscount) : null, includes: svcIncludes, not_includes: svcExcludes, is_top_service: svcIsTop, can_be_repaired: svcCanBeRepaired, is_quotation_only: svcIsQuotationOnly, status: svcStatus };
       if (editSvc) { await updateService(editSvc.id, payload); if (svcImageFile) await uploadServiceImage(editSvc.id, svcImageFile); toast('Updated'); }
       else { const res: any = await addService(payload); if (svcImageFile) await uploadServiceImage(res.service.id, svcImageFile); toast('Added'); }
       setSvcModal(false); loadSvcs();
@@ -541,8 +608,20 @@ const ServicesPage: React.FC = () => {
             </div>
           </div>
           <Table
-            columns={[{ key: 'name', label: 'Name' }, { key: 'description', label: 'Description', flex: 2 }]}
-            rows={parentCategories}
+            columns={[
+              { key: 'name', label: 'Name' },
+              { key: 'status_select', label: 'Status' },
+              { key: 'description', label: 'Description', flex: 2 }
+            ]}
+            rows={parentCategories.map(pc => ({
+              ...pc,
+              status_select: (
+                <StatusInlineSelect
+                  status={pc.status || 'active'}
+                  onSelect={(newStatus) => handleParentCatStatusChange(pc.id, newStatus)}
+                />
+              )
+            }))}
             onEdit={openEditParentCat}
             onDelete={r => confirmDelete(r, 'parent_category')}
             pagination={{
@@ -611,11 +690,18 @@ const ServicesPage: React.FC = () => {
               columns={[
                 { key: 'name', label: 'Name' },
                 { key: 'parent_cat_fmt', label: 'Parent Cat' },
+                { key: 'status_select', label: 'Status' },
                 { key: 'description', label: 'Description', flex: 2 }
               ]}
               rows={categories.map(c => ({
                 ...c,
-                parent_cat_fmt: parentCatName_lookup(c.parent_category_id)
+                parent_cat_fmt: parentCatName_lookup(c.parent_category_id),
+                status_select: (
+                  <StatusInlineSelect
+                    status={c.status || 'active'}
+                    onSelect={(newStatus) => handleCatStatusChange(c.id, newStatus)}
+                  />
+                )
               }))}
               onEdit={openEditCat}
               onDelete={r => confirmDelete(r, 'category')}
@@ -718,6 +804,7 @@ const ServicesPage: React.FC = () => {
                 { key: 'name', label: 'Service Name' },
                 { key: 'parent_cat_fmt', label: 'Parent Cat' },
                 { key: 'category_name', label: 'Sub Category' },
+                { key: 'status_select', label: 'Status' },
                 { key: 'base_price_fmt', label: 'Base Price' },
                 { key: 'is_top_service_checkbox', label: 'Top Service' }
               ]}
@@ -726,6 +813,12 @@ const ServicesPage: React.FC = () => {
                 parent_cat_fmt: parentCatName_lookup(s.parent_category_id),
                 category_name: catName_lookup(s.category_id),
                 base_price_fmt: `PKR ${Number(s.base_price).toLocaleString()}`,
+                status_select: (
+                  <StatusInlineSelect
+                    status={s.status || 'active'}
+                    onSelect={(newStatus) => handleSvcStatusChange(s.id, newStatus)}
+                  />
+                ),
                 is_top_service_checkbox: (
                   <input
                     type="checkbox"
@@ -735,9 +828,9 @@ const ServicesPage: React.FC = () => {
                       try {
                         await updateService(s.id, { is_top_service: checked });
                         setServices(prev => prev.map(item => item.id === s.id ? { ...item, is_top_service: checked } : item));
-                        toast('Service status updated successfully');
+                        toast('Service top status updated successfully');
                       } catch (err: any) {
-                        toast(err?.response?.data?.error || 'Failed to update service status', 'error');
+                        toast(err?.response?.data?.error || 'Failed to update service top status', 'error');
                       }
                     }}
                     style={{ cursor: 'pointer', width: '16px', height: '16px' }}
@@ -772,6 +865,18 @@ const ServicesPage: React.FC = () => {
         }
       >
         <Input label="Parent Category Name" value={parentCatName} onChange={setParentCatName} placeholder="e.g. Home Maintenance" required />
+        <div style={{ marginBottom: '16px' }}>
+          <label style={labelStyle}>Status / سٹیٹس</label>
+          <select
+            value={parentCatStatus}
+            onChange={e => setParentCatStatus(e.target.value as ServiceStatus)}
+            style={inputStyle}
+          >
+            <option value="active">🟢 Active / دستیاب</option>
+            <option value="temporarily_unavailable">🟡 Temporarily Unavailable / عارضی طور پر غیر دستیاب</option>
+            <option value="hidden">🔴 Hidden / چھپائیں</option>
+          </select>
+        </div>
         <Textarea label="Description (optional)" value={parentCatDesc} onChange={setParentCatDesc} placeholder="Describe this parent category…" />
         
         <ImageUploadWithCrop
@@ -866,6 +971,19 @@ const ServicesPage: React.FC = () => {
           </select>
         </div>
 
+        <div style={{ marginBottom: '16px' }}>
+          <label style={labelStyle}>Status / سٹیٹس</label>
+          <select
+            value={catStatus}
+            onChange={e => setCatStatus(e.target.value as ServiceStatus)}
+            style={inputStyle}
+          >
+            <option value="active">🟢 Active / دستیاب</option>
+            <option value="temporarily_unavailable">🟡 Temporarily Unavailable / عارضی طور پر غیر دستیاب</option>
+            <option value="hidden">🔴 Hidden / چھپائیں</option>
+          </select>
+        </div>
+
         <Textarea label="Short Description (optional)" value={catDesc} onChange={setCatDesc} placeholder="Describe this category briefly…" />
         <Textarea label="Long Description" value={catLongDesc} onChange={setCatLongDesc} placeholder="Detailed description for the subcategory page…" rows={5} />
         <ImageUploadWithCrop
@@ -896,6 +1014,19 @@ const ServicesPage: React.FC = () => {
           {/* Left Column: Basic Info & Images */}
           <div>
             <Divider label="Basic Info" />
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelStyle}>Status / سٹیٹس</label>
+              <select
+                value={svcStatus}
+                onChange={e => setSvcStatus(e.target.value as ServiceStatus)}
+                style={inputStyle}
+              >
+                <option value="active">🟢 Active / دستیاب</option>
+                <option value="temporarily_unavailable">🟡 Temporarily Unavailable / عارضی طور پر غیر دستیاب</option>
+                <option value="hidden">🔴 Hidden / چھپائیں</option>
+              </select>
+            </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
               {/* Parent Category selector */}
