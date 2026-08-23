@@ -59,6 +59,9 @@ export const cancelBooking = (id: string) =>
 export const updateBookingStatus = (id: string, status: string) =>
   api.patch(`/admin/bookings/${id}/status`, { status }).then(r => r.data);
 
+export const deleteBooking = (id: string) =>
+  api.delete(`/admin/bookings/${id}`).then(r => r.data);
+
 
 export interface CreateAdminBookingPayload {
   customer_id?: string; // Optional if manual_customer is provided

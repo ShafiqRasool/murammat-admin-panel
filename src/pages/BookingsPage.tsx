@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { getAdminBookings, assignBooking, cancelBooking, updateBookingStatus, createAdminBooking, getAutoAssignSetting, updateAutoAssignSetting, reopenBooking, type Booking, getProposedItems, respondProposal, adminUpdateBookingItems } from '../api/booking.api';
+import { getAdminBookings, assignBooking, cancelBooking, updateBookingStatus, createAdminBooking, getAutoAssignSetting, updateAutoAssignSetting, reopenBooking, deleteBooking, type Booking, getProposedItems, respondProposal, adminUpdateBookingItems } from '../api/booking.api';
 import { getCategories, type ServiceCategory } from '../api/service.api';
 import { getServices, type Service } from '../api/service.api';
 import { getProviders, type Provider } from '../api/provider.api';
@@ -160,6 +160,8 @@ const BookingsPage: React.FC = () => {
   const [selectedProvider, setSelectedProvider] = useState('');
   const [assignLoading, setAssignLoading] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState<Booking | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Assign Modal Filters
   const [providerOnlineFilter, setProviderOnlineFilter] = useState<'all' | 'online' | 'offline'>('all');
@@ -748,7 +750,7 @@ const BookingsPage: React.FC = () => {
               </div>
 
               {/* Actions */}
-              <div style={{ flex: 0.8, display: 'flex', justifyContent: 'flex-end' }} onClick={e => e.stopPropagation()}>
+              <div style={{ flex: 0.9, display: 'flex', justifyContent: 'flex-end', gap: '6px', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
                 {b.status === 'BookingDone' ? (
                   <Button variant="primary" size="sm" onClick={() => { setSelectedProvider(''); setAssignModal(b); }}>
                     Assign
@@ -758,6 +760,32 @@ const BookingsPage: React.FC = () => {
                     View
                   </Button>
                 )}
+                <button
+                  type="button"
+                  title="Delete Order / آرڈر ڈیلیٹ کریں"
+                  onClick={() => setDeleteConfirmModal(b)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '6px 8px',
+                    borderRadius: '8px',
+                    border: '1px solid #fecaca',
+                    background: '#fef2f2',
+                    color: '#dc2626',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#dc2626'; e.currentTarget.style.color = '#fff'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.color = '#dc2626'; }}
+                >
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                  </svg>
+                </button>
               </div>
             </div>
           ))
@@ -810,6 +838,13 @@ const BookingsPage: React.FC = () => {
                     ✕ Cancel Order
                   </Button>
                 )}
+                <Button
+                  variant="danger"
+                  style={{ background: '#7f1d1d', borderColor: '#991b1b' }}
+                  onClick={() => setDeleteConfirmModal(viewModal)}
+                >
+                  🗑 Delete Order
+                </Button>
               </div>
             </div>
           }
@@ -1689,6 +1724,61 @@ const BookingsPage: React.FC = () => {
               </div>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* ── Delete Confirmation Modal ── */}
+      {deleteConfirmModal && (
+        <Modal
+          isOpen={!!deleteConfirmModal}
+          onClose={() => setDeleteConfirmModal(null)}
+          title="Delete Order / آرڈر ڈیلیٹ کریں"
+          width="440px"
+          footer={
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', width: '100%' }}>
+              <Button variant="ghost" onClick={() => setDeleteConfirmModal(null)}>Cancel</Button>
+              <Button
+                variant="danger"
+                loading={deleteLoading}
+                onClick={async () => {
+                  setDeleteLoading(true);
+                  try {
+                    await deleteBooking(deleteConfirmModal.id);
+                    toast('Order deleted successfully', 'success');
+                    setDeleteConfirmModal(null);
+                    if (viewModal?.id === deleteConfirmModal.id) {
+                      setViewModal(null);
+                    }
+                    getAdminBookings({
+                      status: statusTab,
+                      search: debouncedSearch,
+                      category_id: categoryId === 'all' ? undefined : categoryId,
+                      dateSort,
+                      page: currentPage,
+                      limit: pageSize,
+                    }).then(res => {
+                      setBookings(res.data);
+                      setTotalItems(res.total);
+                    }).catch(() => {});
+                  } catch (err: any) {
+                    toast(err.response?.data?.error || 'Failed to delete order', 'error');
+                  } finally {
+                    setDeleteLoading(false);
+                  }
+                }}
+              >
+                🗑 Delete Order
+              </Button>
+            </div>
+          }
+        >
+          <div style={{ padding: '10px 0', textAlign: 'center' }}>
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}>⚠️</div>
+            <h4 style={{ margin: '0 0 8px 0', color: 'var(--text-primary)', fontSize: '16px' }}>Are you sure you want to delete this order?</h4>
+            <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.5' }}>
+              Order <strong>#{deleteConfirmModal.id.split('-')[0].toUpperCase()}</strong> will be safely removed from active order lists across all apps.
+            </p>
+          </div>
         </Modal>
       )}
 
