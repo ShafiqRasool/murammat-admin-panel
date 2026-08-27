@@ -96,6 +96,176 @@ const Textarea: React.FC<{
   </div>
 );
 
+// ─── Rich Textarea (with Bold + Bullet toolbar) ────────────────────────
+const RichTextarea: React.FC<{
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  rows?: number;
+  required?: boolean;
+}> = ({ label, value, onChange, placeholder, rows = 6, required }) => {
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  // Apply bold: wraps selected text with **text**
+  const applyBold = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end   = el.selectionEnd;
+    const selected = value.slice(start, end);
+    if (!selected) return;
+
+    // Toggle: if already bold, remove markers; else add them
+    if (selected.startsWith('**') && selected.endsWith('**') && selected.length > 4) {
+      const inner = selected.slice(2, -2);
+      const newVal = value.slice(0, start) + inner + value.slice(end);
+      onChange(newVal);
+      setTimeout(() => { el.focus(); el.setSelectionRange(start, start + inner.length); }, 0);
+    } else {
+      const wrapped = `**${selected}**`;
+      const newVal = value.slice(0, start) + wrapped + value.slice(end);
+      onChange(newVal);
+      setTimeout(() => { el.focus(); el.setSelectionRange(start, start + wrapped.length); }, 0);
+    }
+  };
+
+  // Apply bullet: toggles '• ' prefix on each selected line
+  const applyBullet = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end   = el.selectionEnd;
+
+    // Find the full lines that cover the selection
+    const beforeSel  = value.slice(0, start);
+    const lineStart  = beforeSel.lastIndexOf('\n') + 1;  // start of first selected line
+    const afterSel   = value.slice(end);
+    const lineEndRel = afterSel.indexOf('\n');
+    const lineEnd    = lineEndRel === -1 ? value.length : end + lineEndRel;
+
+    const selectedBlock = value.slice(lineStart, lineEnd);
+    const lines = selectedBlock.split('\n');
+
+    // Check if ALL lines already have bullet → remove; otherwise add
+    const allBulleted = lines.every(l => l.startsWith('• '));
+    const newLines = allBulleted
+      ? lines.map(l => l.slice(2))           // remove '• '
+      : lines.map(l => l.startsWith('• ') ? l : `• ${l}`);  // add '• '
+
+    const newBlock = newLines.join('\n');
+    const newVal   = value.slice(0, lineStart) + newBlock + value.slice(lineEnd);
+    onChange(newVal);
+    setTimeout(() => {
+      el.focus();
+      el.setSelectionRange(lineStart, lineStart + newBlock.length);
+    }, 0);
+  };
+
+  const toolbarBtnStyle: React.CSSProperties = {
+    padding: '4px 10px',
+    border: '1px solid var(--border)',
+    borderRadius: '6px',
+    background: 'var(--input-bg)',
+    color: 'var(--text-primary)',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: 700,
+    lineHeight: 1,
+    transition: 'background 0.15s, border-color 0.15s',
+  };
+
+  return (
+    <div style={{ marginBottom: '16px' }}>
+      <label style={labelStyle}>
+        {label}{required && <span style={{ color: '#dc2626', marginLeft: '2px' }}>*</span>}
+      </label>
+
+      {/* Toolbar */}
+      <div style={{
+        display: 'flex', gap: '6px', marginBottom: '6px',
+        padding: '6px 8px',
+        background: 'var(--input-bg)',
+        border: '1px solid var(--border)',
+        borderRadius: '10px 10px 0 0',
+        borderBottom: 'none',
+        alignItems: 'center',
+      }}>
+        <button
+          type="button"
+          title="Bold selected text (wraps with **)"
+          onClick={applyBold}
+          style={toolbarBtnStyle}
+        >
+          <strong>B</strong>
+        </button>
+        <button
+          type="button"
+          title="Bullet point — toggle • on selected lines"
+          onClick={applyBullet}
+          style={{ ...toolbarBtnStyle, fontSize: '16px' }}
+        >
+          •≡
+        </button>
+        <span style={{ marginLeft: '6px', fontSize: '11px', color: 'var(--text-muted)' }}>
+          Select text → press <strong>B</strong> for bold &nbsp;|&nbsp; Select line(s) → press <strong>•≡</strong> for bullets
+        </span>
+      </div>
+
+      <textarea
+        ref={textareaRef}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={rows}
+        style={{
+          ...inputStyle,
+          resize: 'vertical',
+          borderRadius: '0 0 10px 10px',
+          fontFamily: 'monospace, Inter, sans-serif',
+          lineHeight: '1.6',
+        }}
+      />
+
+      {/* Live Preview */}
+      {value.trim() && (
+        <div style={{
+          marginTop: '8px',
+          padding: '10px 14px',
+          background: 'var(--input-bg)',
+          border: '1px solid var(--border)',
+          borderRadius: '10px',
+          fontSize: '13px',
+          color: 'var(--text-primary)',
+          lineHeight: '1.7',
+        }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Preview
+          </div>
+          {value.split('\n').map((line, i) => {
+            // Render each line: bullet → li style, **text** → <strong>
+            const isBullet = line.startsWith('• ');
+            const rawLine  = isBullet ? line.slice(2) : line;
+            // Replace **...** with <strong>
+            const parts = rawLine.split(/(\*\*[^*]+\*\*)/);
+            const rendered = parts.map((part, pi) =>
+              part.startsWith('**') && part.endsWith('**')
+                ? <strong key={pi}>{part.slice(2, -2)}</strong>
+                : part
+            );
+            return (
+              <div key={i} style={{ display: 'flex', gap: isBullet ? '6px' : '0', marginBottom: '2px' }}>
+                {isBullet && <span style={{ color: '#00674F', fontWeight: 700, flexShrink: 0 }}>•</span>}
+                <span>{rendered}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Bullet List Editor ─────────────────────────────────────────────────
 const BulletListEditor: React.FC<{
   label: string;
@@ -985,7 +1155,13 @@ const ServicesPage: React.FC = () => {
         </div>
 
         <Textarea label="Short Description (optional)" value={catDesc} onChange={setCatDesc} placeholder="Describe this category briefly…" />
-        <Textarea label="Long Description" value={catLongDesc} onChange={setCatLongDesc} placeholder="Detailed description for the subcategory page…" rows={5} />
+        <RichTextarea
+          label="Long Description"
+          value={catLongDesc}
+          onChange={setCatLongDesc}
+          placeholder="Detailed description… Use toolbar to make text **bold** or add • bullet points"
+          rows={8}
+        />
         <ImageUploadWithCrop
           label="Sub Category Image"
           currentPreview={catImagePreview}
