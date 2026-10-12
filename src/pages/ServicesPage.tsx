@@ -599,10 +599,14 @@ const ServicesPage: React.FC = () => {
     setParentCatName(c.name); 
     setParentCatDesc(c.description ?? ''); 
     setParentCatStatus(c.status || 'active');
+    // image_url is now a plain URL string (cover image only)
     setParentCatImagePreview(c.image_url ? (c.image_url.startsWith('http') ? c.image_url : `${mediaBaseUrl}${c.image_url}`) : null);
     setParentCatImageFile(null);
-    const urls = c.image_urls ? c.image_urls.map(url => url.startsWith('http') ? url : `${mediaBaseUrl}${url}`) : [];
-    setParentCatImagePreviews(urls);
+    // image_urls is a separate array for slider images
+    const sliderUrls = Array.isArray(c.image_urls)
+      ? c.image_urls.map(url => url.startsWith('http') ? url : `${mediaBaseUrl}${url}`)
+      : [];
+    setParentCatImagePreviews(sliderUrls);
     setParentCatImageFiles([]);
     setParentCatModal(true); 
   };
