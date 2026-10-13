@@ -138,3 +138,16 @@ export const uploadParentCategoryImages = (id: string, files: File[]) => {
     headers: { 'Content-Type': 'multipart/form-data' }
   }).then(r => r.data);
 };
+
+// Clear all slider images before uploading a fresh set
+export const clearParentCategorySliderImages = (id: string) =>
+  api.delete(`/admin/services/parent-categories/${id}/slider-images`).then(r => r.data);
+
+// Upload a single slider image — call in a loop to avoid 413 from large batches
+export const uploadParentCategorySliderImage = (id: string, file: File) => {
+  const formData = new FormData();
+  formData.append('image', file);
+  return api.post(`/admin/services/parent-categories/${id}/slider-image`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }).then(r => r.data);
+};

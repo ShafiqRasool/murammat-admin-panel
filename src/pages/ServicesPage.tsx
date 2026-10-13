@@ -2,9 +2,11 @@ import React, { useEffect, useState, useCallback } from 'react';
 import {
   getCategories, addCategory, updateCategory, deleteCategory, uploadCategoryImage,
   getServices, addService, updateService, deleteService, uploadServiceImage,
-  getParentCategories, addParentCategory, updateParentCategory, deleteParentCategory, uploadParentCategoryImage, uploadParentCategoryImages,
+  getParentCategories, addParentCategory, updateParentCategory, deleteParentCategory,
+  uploadParentCategoryImage, uploadParentCategorySliderImage, clearParentCategorySliderImages,
   type ServiceCategory, type Service, type ParentCategory, type ServiceStatus
 } from '../api/service.api';
+
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
 import Table from '../components/ui/Table';
@@ -617,15 +619,27 @@ const ServicesPage: React.FC = () => {
       let res: any;
       if (editParentCat) res = await updateParentCategory(editParentCat.id, { name: parentCatName, description: parentCatDesc, status: parentCatStatus });
       else res = await addParentCategory(parentCatName, parentCatDesc, parentCatStatus);
-      
+
       const parentCatId = editParentCat ? editParentCat.id : res.parent_category?.id;
+
+      // Upload cover image (single request)
       if (parentCatImageFile && parentCatId) {
         await uploadParentCategoryImage(parentCatId, parentCatImageFile);
       }
+
+      // Upload slider images one-by-one to avoid 413 payload-too-large errors
       if (parentCatImageFiles.length > 0 && parentCatId) {
-        await uploadParentCategoryImages(parentCatId, parentCatImageFiles);
+        // Clear existing slider images first, then append each new one sequentially
+        await clearParentCategorySliderImages(parentCatId);
+        for (const file of parentCatImageFiles) {
+          await uploadParentCategorySliderImage(parentCatId, file);
+        }
       }
-      toast('Parent category saved'); setParentCatModal(false); loadParentCats(); loadAllParentCats();
+
+      toast('Parent category saved');
+      setParentCatModal(false);
+      loadParentCats();
+      loadAllParentCats();
     } catch (e: any) { toast(e?.response?.data?.error || 'Failed', 'error'); }
     finally { setParentCatSaving(false); }
   };
