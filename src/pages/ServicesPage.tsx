@@ -1071,6 +1071,7 @@ const ServicesPage: React.FC = () => {
           label="Category Main Image (Shown on landing page cards)"
           currentPreview={parentCatImagePreview}
           onFileReady={handleParentCatImageReady}
+          onRemove={() => { setParentCatImageFile(null); setParentCatImagePreview(null); }}
           required
           maxMB={5}
           quality={0.85}
@@ -1184,6 +1185,7 @@ const ServicesPage: React.FC = () => {
           label="Sub Category Image"
           currentPreview={catImagePreview}
           onFileReady={handleCatImageReady}
+          onRemove={() => { setCatImageFile(null); setCatImagePreview(null); }}
           required
           maxMB={3}
           disableCompress
@@ -1276,6 +1278,7 @@ const ServicesPage: React.FC = () => {
                 label="Service Image"
                 currentPreview={svcImagePreview}
                 onFileReady={handleSvcImageReady}
+                onRemove={() => { setSvcImageFile(null); setSvcImagePreview(null); }}
                 maxMB={3}
                 quality={0.80}
                 maxDim={900}
